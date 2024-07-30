@@ -7,8 +7,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from src.groq import router as ai_router
+from src.routers.ai_router import ai_router
 from src.routers.graphql import graphql_router
+from src.routers.media_router import media_router
 
 app = FastAPI()
 
@@ -24,15 +25,17 @@ app.add_middleware(
 # Authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+
+# Routers
 app.include_router(ai_router)
+app.include_router(graphql_router, prefix="/graphql")
+app.include_router(media_router, prefix="/media")
 
 
+# Root
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
-
-
-app.include_router(graphql_router, prefix="/graphql")
 
 
 if __name__ == "__main__":

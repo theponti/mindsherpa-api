@@ -1,81 +1,18 @@
 import json
-from fastapi import APIRouter, Form, UploadFile, Depends
+from fastapi import APIRouter, Form
 from fastapi.responses import StreamingResponse
-import groq
-import os
-from openai import AsyncOpenAI, OpenAI
 
-from src.logger import logger
-from src.helpers.generation_statistics import GenerationStatistics
-from src.schema import User, get_current_user
+from src.utils.ai_models import open_source_models
+from src.utils.logger import logger
+from src.utils.generation_statistics import GenerationStatistics
 from src.services.file_service import get_file_contents
+from src.services.groq_service import groq_client
+from src.services.openai_service import openai_async_client
 
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", None)
-
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
-openai_async_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-groq_client = groq.Groq()
-
-llama3_70b_8192 = "llama3-70b-8192"
-llama3_8b_8192 = "llama3-8b-8192"
-mixtral_8x7b_32768 = "mixtral-8x7b-32768"
-gemma_7b_it = "gemma-7b-it"
-gemma2_9b_it = "gemma2-9b-it"
-groq_whisper_large_v3 = "groq-whisper-large-v3"
-
-open_source_models = [
-    llama3_70b_8192,
-    llama3_8b_8192,
-    mixtral_8x7b_32768,
-    gemma_7b_it,
-]
+ai_router = APIRouter()
 
 
-content_model_options = [model for model in open_source_models]
-content_model_options.append(gemma2_9b_it)
-
-router = APIRouter()
-
-
-@router.post("/transcribe_audio")
-def transcribe_audio(
-    audio_file: UploadFile,
-    model: str = "openai-whisper-1",
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Transcribes audio using either OpenAI's whisper or Groq's Whisper API.
-    NOTE : OPenAI's transcription is faster as Groq uses whisper large v3 model which is not required at the moment
-    """
-    file = audio_file.file.read()
-
-    if model == groq_whisper_large_v3:
-        transcription = groq_client.audio.transcriptions.create(
-            file=file,
-            model="whisper-large-v3",
-            prompt="",
-            response_format="json",
-            language="en",
-            temperature=0.0,
-        )
-
-    elif model == "openai-whisper-1":
-        # OPENAI Transcription
-        transcription = openai_client.audio.transcriptions.create(
-            model="whisper-1", file=file
-        )
-
-    else:
-        print("Choose an appropriate transcription model")
-        return None
-
-    results = transcription.text
-
-    return results
-
-
-@router.post("/chat/stream")
+@ai_router.post("/chat/stream")
 async def stream_chat(message: str = Form(...)):
     async def generate():
         stream = await openai_async_client.chat.completions.create(
@@ -84,9 +21,10 @@ async def stream_chat(message: str = Form(...)):
             stream=True,
         )
         async for chunk in stream:
-            if chunk.choices[0].delta.content is not None:
-                logger.info(f" -- CHUNK -- {chunk.choices[0].delta.content} ")
-                yield chunk.choices[0].delta.content
+            content = chunk.choices[0].delta.content
+            if content is not None:
+                logger.info(f" -- CHUNK -- {content} ")
+                yield content
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
@@ -142,7 +80,7 @@ def get_user_prompt(transcript: str):
     return user_prompt.format(json_example=json_example, user_input=transcript)
 
 
-@router.post("/generate_notes_structure")
+@ai_router.post("/generate_notes_structure")
 def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
     """
     Returns notes structure content as well as total tokens and total time for generation.
