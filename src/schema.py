@@ -70,7 +70,7 @@ class Query:
     notes: typing.List[Note] = strawberry.field(resolver=get_notes)
 
     @strawberry.field
-    async def protected_route(self, info: strawberry.Info) -> User:
+    async def current_user(self, info: strawberry.Info) -> User:
         current_user = info.context.get("current_user")
 
         if not current_user:

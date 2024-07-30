@@ -38,9 +38,8 @@ def transcribe_audio(
         )
 
     else:
-        print("Choose an appropriate transcription model")
-        return None
+        return {"error": "Choose an appropriate transcription model"}
 
     results = transcription.text
 
-    return results
+    return {"text": results}
