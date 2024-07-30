@@ -12,6 +12,16 @@ from src.services.openai_service import openai_async_client
 ai_router = APIRouter()
 
 
+@ai_router.post("/chat")
+async def chat(message: str = Form(...)):
+    response = await openai_async_client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": message}],
+        stream=False,
+    )
+    return {"text": response.choices[0].message.content}
+
+
 @ai_router.post("/chat/stream")
 async def stream_chat(message: str = Form(...)):
     async def generate():
