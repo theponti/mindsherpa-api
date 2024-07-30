@@ -1,0 +1,35 @@
+FROM python:3.11-alpine as base
+
+ARG DEV=false
+ENV PYTHONUNBUFFERED=1 \
+  PYTHONDONTWRITEBYTECODE=1 \
+  PIP_NO_CACHE_DIR=off \
+  PIP_DISABLE_PIP_VERSION_CHECK=on \
+  PIP_DEFAULT_TIMEOUT=100
+
+# Install system dependencies
+RUN apk update && \
+  apk add --no-cache \
+  libpq \
+  gcc \
+  musl-dev \
+  python3-dev \
+  libffi-dev \
+  openssl-dev
+
+WORKDIR /app
+
+# Copy requirements files
+COPY requirements.txt ./
+
+# Install dependencies
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# Copy the rest of the application
+COPY . .
+
+# Make port 8000 available to the world outside this container
+EXPOSE 8000
+
+# Run the application with hot reloading using watchgod
+CMD ["uvicorn", "src.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
