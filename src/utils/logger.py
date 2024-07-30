@@ -16,7 +16,9 @@ class StructuredLogger:
 
     def _log(self, level: str, message: str, values: Optional[Dict[str, Any]] = None):
         log_data = {"message": message, "values": values or {}}
-        self.logger.log(getattr(logging, level), json.dumps(log_data))
+        self.logger.log(
+            getattr(logging, level), json.dumps(log_data, indent=2, sort_keys=True)
+        )
 
     def debug(self, message: str, values: Optional[Dict[str, Any]] = None):
         self._log("DEBUG", message, values)

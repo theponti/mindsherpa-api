@@ -90,8 +90,8 @@ def get_user_prompt(transcript: str):
     return user_prompt.format(json_example=json_example, user_input=transcript)
 
 
-@ai_router.post("/generate_notes_structure")
-def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
+@ai_router.post("/focus")
+def focus(transcript: str, model: str = "llama3-70b-8192"):
     """
     Returns notes structure content as well as total tokens and total time for generation.
     """
@@ -149,8 +149,8 @@ def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
                     total_time=int(usage.total_time) if usage.total_time else 0,
                     model_name=model,
                 )
-                logger.info(f" -- STATS -- {statistics_to_return} ")
-                # print("-- Content --", completion.choices[0].message.content)
+                logger.info("focus_stats", statistics_to_return.get_stats())
+
                 return (
                     json.loads(completion.choices[0].message.content)
                     if completion.choices[0].message.content

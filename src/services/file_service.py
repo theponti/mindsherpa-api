@@ -1,11 +1,10 @@
 import os
 
+from conf import ROOT_DIR
+
 
 def get_file_contents(filepath: str):
-    root_dir = os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    )
-    abs_filepath = os.path.join(root_dir, filepath)
+    abs_filepath = os.path.join(ROOT_DIR, filepath)
     try:
         with open(abs_filepath, "r") as file:
             content = file.read()

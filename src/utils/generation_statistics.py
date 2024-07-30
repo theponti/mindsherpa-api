@@ -48,6 +48,30 @@ class GenerationStatistics:
         self.output_tokens += other.output_tokens
         self.total_time += other.total_time
 
+    def get_stats(self):
+        return {
+            "model_name": self.model_name,
+            "input": {
+                "speed": self.get_input_speed(),
+                "tokens": self.input_tokens,
+                "time": self.input_time,
+            },
+            "output": {
+                "speed": self.get_output_speed(),
+                "tokens": self.output_tokens,
+                "time": self.output_time,
+            },
+            "total": {
+                "speed": (
+                    (self.input_tokens + self.output_tokens) / self.total_time
+                    if self.total_time != 0
+                    else 0
+                ),
+                "tokens": self.input_tokens + self.output_tokens,
+                "time": self.total_time,
+            },
+        }
+
     def __str__(self):
         return (
             f"\n## {self.get_output_speed():.2f} T/s ⚡\nRound trip time: {self.total_time:.2f}s  Model: {self.model_name}\n\n"
