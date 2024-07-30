@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Form, UploadFile
+import json
+from fastapi import APIRouter, Form, UploadFile, Depends
 from fastapi.responses import StreamingResponse
 import groq
 import os
 from openai import AsyncOpenAI, OpenAI
+
 from src.logger import logger
 from src.helpers.generation_statistics import GenerationStatistics
+from src.schema import User, get_current_user
+from src.services.file_service import get_file_contents
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", None)
@@ -35,7 +39,11 @@ router = APIRouter()
 
 
 @router.post("/transcribe_audio")
-def transcribe_audio(audio_file: UploadFile, model: str = "openai-whisper-1"):
+def transcribe_audio(
+    audio_file: UploadFile,
+    model: str = "openai-whisper-1",
+    current_user: User = Depends(get_current_user),
+):
     """
     Transcribes audio using either OpenAI's whisper or Groq's Whisper API.
     NOTE : OPenAI's transcription is faster as Groq uses whisper large v3 model which is not required at the moment
@@ -83,30 +91,72 @@ async def stream_chat(message: str = Form(...)):
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
+def get_user_prompt(transcript: str):
+    json_example = json.dumps(
+        {
+            "Today's Tasks": [
+                {
+                    "content": "Finish the project report",
+                    "datetime": "2024-05-15T15:30:00",
+                    "type": "task",
+                },
+                {
+                    "content": "Buy groceries",
+                    "datetime": "2024-05-15T15:30:00",
+                    "type": "task",
+                },
+                {
+                    "content": "Call the plumber to fix the sink",
+                    "datetime": "2024-05-15T15:30:00",
+                    "type": "task",
+                },
+                {
+                    "content": "Leave for the airport by 3:30 PM to ensure enough time for check-in and security",
+                    "datetime": "2024-05-15T15:30:00",
+                    "type": "task",
+                },
+            ],
+            "Future Tasks": [
+                {
+                    "content": "Schedule my dentist appointment for next month",
+                    "datetime": "2024-06-15T15:30:00",
+                    "type": "task",
+                },
+                {
+                    "content": "Plan a birthday party for my sister in two weeks",
+                    "datetime": "2024-06-15T15:30:00",
+                    "type": "task",
+                },
+            ],
+            "Feelings": [
+                {
+                    "content": "I am feeling a bit tired probably because I overworked yesterday but yeah I need to go back to work anyhow",
+                    "datetime": "2024-05-15T15:30:00",
+                    "type": "feeling",
+                },
+            ],
+        },
+        indent=2,
+    )
+    user_prompt = get_file_contents("src/prompts/sherpa_user_input_formatter.md")
+    return user_prompt.format(json_example=json_example, user_input=transcript)
+
+
 @router.post("/generate_notes_structure")
 def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
     """
     Returns notes structure content as well as total tokens and total time for generation.
     """
-
+    system_prompt = get_file_contents("src/prompts/sherpa_base.md")
+    user_prompt = get_file_contents("src/prompts/sherpa_user_input_formatter.md")
     if not transcript.strip():
         return None, {"error": "No tasks provided in the transcript"}
 
-    shot_example = """
-        {"Today's Tasks": 
-            1: "Finish the project report",
-            2 : "Buy groceries",
-            3 : "Call the plumber to fix the sink",
-            4: "Leave for the airport by 3:30 PM to ensure enough time for check-in and security"
-        },
-        {"Future Tasks": 
-            1 : "Schedule my dentist appointment for next month",
-            2: "Plan a birthday party for my sister in two weeks"
-        },
-        {"Feelings" : 
-            1. I am feeling a bit tired probably because I overworked yesterday but yeah I need to go back to work anyhow
-        }
-        """
+    try:
+        user_prompt = get_user_prompt(transcript)
+    except Exception as e:
+        logger.error(f" ********* ERROR IN USER PROMPT ********: {e} ***** ")
+        return None, {"error": str(e)}
 
     if model in open_source_models:
 
@@ -116,11 +166,11 @@ def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
                 messages=[
                     {
                         "role": "system",
-                        "content": 'Write in JSON format:\n\n{"Today\'s Tasks go here":"Description of section goes here","Future Tasks go here":"Description of section goes here","Feelings goes here":"Description of section goes here"}',
+                        "content": system_prompt,
                     },
                     {
                         "role": "user",
-                        "content": f"Here are my thoughts for today : {transcript}\n\n### Example\n\n{shot_example}### Instructions\n\nCreate a structure for comprehensive tasks and feeling structuring based on the above transcribed audio. Section titles and content descriptions must be comprehensive. Quality over quantity.",
+                        "content": f"{user_prompt}\n\n### User Input:\n\n{transcript}",
                         # This should be the actual paragraph from which tasks need to be extracted
                     },
                 ],
@@ -153,7 +203,11 @@ def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
                 )
                 logger.info(f" -- STATS -- {statistics_to_return} ")
                 # print("-- Content --", completion.choices[0].message.content)
-                return statistics_to_return, completion.choices[0].message.content
+                return (
+                    json.loads(completion.choices[0].message.content)
+                    if completion.choices[0].message.content
+                    else None
+                )
         except Exception as e:
             logger.error(f" ********* STATISTICS GENERATION error ******* : {e} ")
             return None, {"error": str(e)}
