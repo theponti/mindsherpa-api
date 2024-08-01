@@ -12,6 +12,10 @@ open_source_models = [
     gemma_7b_it,
 ]
 
+audio_models = {
+    "groq": "whisper-large-v3",
+    "openai": "whisper-1",
+}
 
 content_model_options = [model for model in open_source_models]
 content_model_options.append(gemma2_9b_it)

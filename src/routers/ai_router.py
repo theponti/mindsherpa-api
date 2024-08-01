@@ -1,6 +1,7 @@
 import json
 from fastapi import APIRouter, Form
 from fastapi.responses import StreamingResponse
+from src.services.sherpa_service import analyze_user_input
 
 from src.utils.ai_models import open_source_models
 from src.utils.logger import logger
@@ -86,7 +87,7 @@ def get_user_prompt(transcript: str):
         },
         indent=2,
     )
-    user_prompt = get_file_contents("src/prompts/sherpa_user_input_formatter.md")
+    user_prompt = get_file_contents("src/prompts/user_input_formatter_v1.md")
     return user_prompt.format(json_example=json_example, user_input=transcript)
 
 
@@ -96,7 +97,7 @@ def focus(transcript: str, model: str = "llama3-70b-8192"):
     Returns notes structure content as well as total tokens and total time for generation.
     """
     system_prompt = get_file_contents("src/prompts/sherpa_base.md")
-    user_prompt = get_file_contents("src/prompts/sherpa_user_input_formatter.md")
+
     if not transcript.strip():
         return None, {"error": "No tasks provided in the transcript"}
 
@@ -112,15 +113,8 @@ def focus(transcript: str, model: str = "llama3-70b-8192"):
             completion = groq_client.chat.completions.create(
                 model=model,
                 messages=[
-                    {
-                        "role": "system",
-                        "content": system_prompt,
-                    },
-                    {
-                        "role": "user",
-                        "content": f"{user_prompt}\n\n### User Input:\n\n{transcript}",
-                        # This should be the actual paragraph from which tasks need to be extracted
-                    },
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.3,
                 max_tokens=8000,
@@ -159,3 +153,10 @@ def focus(transcript: str, model: str = "llama3-70b-8192"):
         except Exception as e:
             logger.error(f" ********* STATISTICS GENERATION error ******* : {e} ")
             return None, {"error": str(e)}
+
+
+@ai_router.get("/test")
+def test():
+    test_user_input = get_file_contents("src/prompts/test_user_input.md")
+    analysis = analyze_user_input(test_user_input)
+    return {"analysis": analysis}
