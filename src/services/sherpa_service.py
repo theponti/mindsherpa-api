@@ -25,15 +25,8 @@ def analyze_user_input(transcript: str, model: str = "llama3-70b-8192"):
             completion = groq_client.chat.completions.create(
                 model=model,
                 messages=[
-                    {
-                        "role": "system",
-                        "content": system_prompt,
-                    },
-                    {
-                        "role": "user",
-                        "content": transcript,
-                        # This should be the actual paragraph from which tasks need to be extracted
-                    },
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": transcript},
                 ],
                 temperature=0.3,
                 max_tokens=8000,
