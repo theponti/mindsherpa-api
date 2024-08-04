@@ -124,7 +124,7 @@ def get_sherpa_response(message: str, chat_id, user_id) -> str | None:
     - Respond with the least amount of words possible, but use full sentences.
     - Include emojis in your responses where applicable.
     - Your response should be in a friendly, upbeat and conversational tone.
-    - Your response should use all of the User Context and the entire Chat History to provide context to your response
+    - Your response should use all of the User Context and the entire Chat History to provide context to your response.
     - Your response should use that knowledge about the user to answer the user's latest message.
 
     ## User Context
@@ -139,9 +139,6 @@ def get_sherpa_response(message: str, chat_id, user_id) -> str | None:
     chat_history_contents = [message.content for message in chat_history]
     user_context_contents = [note.content for note in user_context]
 
-    logger.info(
-        "User Context", {"contexts": user_context_contents, "full": user_context}
-    )
     response = openai_client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
