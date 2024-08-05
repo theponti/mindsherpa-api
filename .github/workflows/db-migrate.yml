@@ -1,0 +1,40 @@
+name: Apply Alembic Migrations
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt  # Ensure this includes alembic and your database driver
+
+      - name: Apply Alembic migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          alembic upgrade head
+
+      - name: Check for migration errors
+        if: failure()
+        run: |
+          echo "Migration failed. Check the logs for details."
+          exit 1
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "Migrations applied successfully!"

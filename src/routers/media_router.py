@@ -1,18 +1,20 @@
 import io
 from fastapi import APIRouter, Depends, UploadFile
-from src.services.sherpa_service import analyze_user_input
 
 from src.utils.ai_models import audio_models
+from src.services.auth import get_current_user
 from src.services.groq_service import groq_client
+from src.services.media import transcribe_audio
 from src.services.openai_service import openai_client
-from src.schema import User, get_current_user
+from src.services.sherpa_service import analyze_user_input
+from src.schemas.query import User
 
 
 media_router = APIRouter()
 
 
 @media_router.post("/audio/transcribe")
-def transcribe_audio(
+def transcription_route(
     audio_file: UploadFile,
     model: str = "openai",
     current_user: User = Depends(get_current_user),
@@ -23,6 +25,7 @@ def transcribe_audio(
     """
     file = audio_file.file.read()
     buffer = io.BytesIO(file)
+    transcription = transcribe_audio(buffer, model)
     buffer.name = "audio.m4a"
 
     if model == "groq":

@@ -1,0 +1,12 @@
+{
+  "cSpell.ignoreWords": [
+    "sqlalchemy",
+    "openai",
+    "pydantic",
+    "supabase",
+    "groq",
+    "fastapi",
+    "uvicorn",
+    "dotenv"
+  ]
+}

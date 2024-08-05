@@ -6,7 +6,10 @@ from strawberry.fastapi import GraphQLRouter, BaseContext
 from typing import Any, AsyncGenerator
 
 
-from src.schema import Query, Mutation, User, get_current_user
+from src.schemas.query import Query
+from src.schemas.mutation import Mutation
+from src.schemas.types import User
+from src.services.auth import get_current_user
 
 
 class Context(BaseContext):
