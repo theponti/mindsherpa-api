@@ -1,21 +1,21 @@
 from typing import List
-from openai import chat
 import strawberry
+from src.data.db import Session
 
 
-from src.services.supabase import supabase_client
+from src.data.models import Chat as ChatModel
 from src.services.notebooks import get_notebooks, get_user_notes
 from src.schemas.types import Chat, Note, Notebook, User
 
 
 async def chats(self, info: strawberry.Info) -> List[Chat]:
-    result = (
-        supabase_client.from_("chats")
-        .select("*")
-        .eq("user_id", info.context.get("current_user").id)
-        .execute()
+    session = Session()
+    chats = (
+        session.query(ChatModel)
+        .filter(ChatModel.user_id == info.context.get("current_user").id)
+        .all()
     )
-    return [Chat(**chat) for chat in result.data]
+    return [Chat(**chat.__dict__) for chat in chats]
 
 
 async def current_user(self, info: strawberry.Info) -> User:

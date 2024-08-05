@@ -1,6 +1,6 @@
-import os
+import enum
+from re import S
 from sqlalchemy import (
-    create_engine,
     Column,
     Integer,
     String,
@@ -9,10 +9,9 @@ from sqlalchemy import (
     ForeignKey,
     Table,
 )
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-
-Base = declarative_base()
+from sqlalchemy.dialects.postgresql import ENUM
+from src.data.db import Base
 
 
 class Profile(Base):
@@ -150,18 +149,27 @@ Profile.system_state = relationship("SystemState", back_populates="profile")
 class Chat(Base):
     __tablename__ = "chats"
     id = Column(String, primary_key=True)
+    title = Column(String, nullable=False)
     profile_id = Column(String, ForeignKey("profiles.id"))
     created_at = Column(DateTime)
+
+
+Chat.profile = relationship("Profile", back_populates="chats")
+Profile.chats = relationship("Chat", back_populates="profile")
 
 
 class Message(Base):
     __tablename__ = "messages"
     id = Column(String, primary_key=True)
+    message = Column(String)
+    role = Column(String, nullable=False)
     chat_id = Column(String, ForeignKey("chats.id"))
     profile_id = Column(String, ForeignKey("profiles.id"))
-    role = Column(String)
-    message = Column(String)
     created_at = Column(DateTime)
+
+
+Chat.messages = relationship("Message", back_populates="chat")
+Message.chat = relationship("Chat", back_populates="messages")
 
 
 class Note(Base):
@@ -172,6 +180,9 @@ class Note(Base):
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
 
+
+Note.profile = relationship("Profile", back_populates="notes")
+Profile.notes = relationship("Note", back_populates="profile")
 
 # Association table for many-to-many relationship between Memory and Tag
 memory_tags = Table(
@@ -187,16 +198,13 @@ Tag.memories = relationship("Memory", secondary=memory_tags, back_populates="tag
 Entity.memories = relationship("Memory", secondary="entity_memories")
 Memory.entities = relationship("Entity", secondary="entity_memories")
 
-Chat.messages = relationship("Message", back_populates="chat")
-Profile.chats = relationship("Chat", back_populates="profile")
-Message.chat = relationship("Chat", back_populates="messages")
+# Note and Tag many-to-many relationship
+note_tags = Table(
+    "note_tags",
+    Base.metadata,
+    Column("note_id", String, ForeignKey("notes.id")),
+    Column("tag_id", String, ForeignKey("tags.id")),
+)
 
-Note.profile = relationship("Profile", back_populates="notes")
-
-Profile.notes = relationship("Note", back_populates="profile")
-
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable is not set")
-
-engine = create_engine(DATABASE_URL, echo=True)
+Note.tags = relationship("Tag", secondary=note_tags, back_populates="notes")
+Tag.notes = relationship("Note", secondary=note_tags, back_populates="tags")

@@ -1,7 +1,9 @@
 from enum import Enum
 import json
 from typing import List
+from src.data.db import Session
 
+from src.data.models import Message as MessageModel
 from src.schemas.types import Message
 from src.services.file_service import get_file_contents
 from src.services.groq_service import groq_client
@@ -73,23 +75,21 @@ def analyze_user_input(transcript: str, model: str = "llama3-70b-8192"):
             return None, {"error": str(e)}
 
 
-def insert_message(chat_id: int, message: str, user_id: str, role: str) -> Message:
-    response = (
-        supabase_client.from_("messages")
-        .insert(
-            {"content": message, "chat_id": chat_id, "user_id": user_id, "role": role}
-        )
-        .execute()
+def insert_message(chat_id: int, message: str, profile_id: str, role: str) -> Message:
+    session = Session()
+    new_message = MessageModel(
+        message=message, chat_id=chat_id, profile_id=profile_id, role=role
     )
-    return Message(**response.data[0])
+    session.add(new_message)
+    session.commit()
+
+    return Message(**new_message.__dict__)
 
 
 def get_chat_history(chat_id: int) -> List[Message]:
-    response = (
-        supabase_client.from_("messages").select("*").eq("chat_id", chat_id).execute()
-    )
-
-    return [Message(**message) for message in response.data]
+    session = Session()
+    chat = session.query(MessageModel).filter(MessageModel.chat_id == chat_id).all()
+    return [Message(**message) for message in chat]
 
 
 def get_sherpa_response(message: str, chat_id, user_id) -> str | None:
@@ -121,7 +121,7 @@ def get_sherpa_response(message: str, chat_id, user_id) -> str | None:
 
     chat_history = get_chat_history(chat_id)
     user_context = get_user_notes(user_id)
-    chat_history_contents = [message.content for message in chat_history]
+    chat_history_contents = [message.message for message in chat_history]
     user_context_contents = [note.content for note in user_context]
 
     response = openai_client.chat.completions.create(

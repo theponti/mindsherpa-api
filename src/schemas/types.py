@@ -20,18 +20,18 @@ class Profile:
 class Chat:
     id: int
     title: str
+    profile_id: str
     created_at: str
-    user_id: str
 
 
 @strawberry.type
 class Message:
     id: int
-    content: str
-    created_at: str
-    user_id: str
-    chat_id: int
+    message: str
     role: MessageRole
+    chat_id: int
+    profile_id: str
+    created_at: str
 
 
 @strawberry.type
