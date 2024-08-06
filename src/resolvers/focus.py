@@ -1,80 +1,86 @@
-from typing import Optional
+from enum import Enum
+from typing import List
 import strawberry
 
 
+@strawberry.enum
+class Category(Enum):
+    CAREER = "career"
+    PERSONAL_DEVELOPMENT = "personal_development"
+    HEALTH = "health"
+    MENTAL_HEALTH = "mental_health"
+    FINANCE = "finance"
+    EDUCATION = "education"
+    RELATIONSHIPS = "relationships"
+    HOME = "home"
+    INTERESTS = "interests"
+    ADVENTURE = "adventure"
+    TECHNOLOGY = "technology"
+    SPIRITUALITY = "spirituality"
+    SOCIAL = "social"
+    PRODUCTIVITY = "productivity"
+    CREATIVITY = "creativity"
+    CULTURE = "culture"
+    LEGAL = "legal"
+    EVENTS = "events"
+    PROJECTS = "projects"
+
+
+@strawberry.enum
+class Priority(Enum):
+    HIGH = 1  # Critical and time-sensitive tasks
+    MEDIUM = 2  # Important tasks
+    NORMAL = 3  # Medium-priority tasks
+    LOW = 4  # Low-priority tasks
+    OPTIONAL = 5  # Optional tasks
+
+
+@strawberry.enum
+class Sentiment(Enum):
+    POSITIVE = "positive"
+    NEUTRAL = "neutral"
+    NEGATIVE = "negative"
+
+@strawberry.enum
+class SherpaItemType(Enum):
+    EVENT = 'event'
+    TASK = 'task'
+    GOAL = "goal"
+    REMINDER = "reminder"
+    NOTE = "note"
+    FEELING = "FEELING"
+    REQUEST = "REQUEST"
+
+@strawberry.enum
+class SherpaItemTaskSize(Enum):
+    SMALL = "small"
+    MEDIUM = "medium"
+    LARGE = "large"
+    EPIC = "epic"
+
 @strawberry.type
-class Goal:
-    priority_grade: int
-    value: str
-    sentiment: str
-    goal_id: str
+class SherpaItem:
+    text: str
+    type: SherpaItemType
+    task_size: SherpaItemTaskSize
+    category: Category  # Use the Category enum
+    priority: Priority  # Use the Priority enum
+    sentiment: Sentiment  # Use the Sentiment enum
+    due_date: str  # Should be in YYYY-MM-DD format
 
 
 @strawberry.type
-class ActionMetadata:
-    location: Optional[str] = None
-    timeframe: Optional[str] = None
-    current_expenses: Optional[str] = None
-    goal_timeframe: Optional[str] = None
-    belief: Optional[str] = None
+class FocusOutput:
+    items: List[SherpaItem]
 
 
-@strawberry.type
-class Action:
-    type: Optional[str] = None
-    value: Optional[str] = None
-    sentiment: Optional[str] = None
-    goal_id: Optional[str] = None
-    metadata: ActionMetadata | None = None
-
-
-@strawberry.type
-class Belief:
-    type: Optional[str] = None
-    value: Optional[str] = None
-    sentiment: Optional[str] = None
-
-
-@strawberry.type
-class Preference:
-    type: Optional[str] = None
-    value: Optional[str] = None
-    sentiment: Optional[str] = None
-
-
-@strawberry.type
-class Location:
-    type: Optional[str] = None
-    value: Optional[str] = None
-    location_type: Optional[str] = None
-    country: Optional[str] = None
-
-
-@strawberry.type
-class Date:
-    type: Optional[str] = None
-    value: Optional[str] = None
-    action: Optional[str] = None
-
-
-@strawberry.type
-class Focus:
-    vision: Optional[str] = None
-    goals: list[Goal]
-    actions: list[Action]
-    beliefs: list[Belief]
-    preferences: list[Preference]
-    locations: list[Location]
-    dates: list[Date]
-
-
-def convert_dict_to_focus(data):
-    return Focus(
-        vision=data["vision"],
-        goals=[Goal(**goal) for goal in data["goals"]],
-        actions=[Action(**action) for action in data["actions"]],
-        beliefs=[Belief(**belief) for belief in data["beliefs"]],
-        preferences=[Preference(**preference) for preference in data["preferences"]],
-        locations=[Location(**location) for location in data["locations"]],
-        dates=[Date(**date) for date in data["dates"]],
+def convert_to_sherpa_item(data: dict) -> SherpaItem:
+    return SherpaItem(
+        type=data["type"],
+        task_size=data["task_size"],
+        text=data["text"],
+        category=Category(data["category"]),
+        priority=Priority(data["priority"]),
+        sentiment=Sentiment(data["sentiment"]),
+        due_date=data["due_date"],
     )

@@ -14,35 +14,47 @@ from src.utils.generation_statistics import GenerationStatistics
 
 
 def chat_to_gql(chat: ChatModel) -> Chat:
-    return Chat(
-        id=chat.id,
-        title=chat.title,
-        created_at=chat.created_at,
-    )
+    try:
+        return Chat(
+            **{field: getattr(chat, field) for field in ["id", "title", "created_at"]}
+        )
+    except AttributeError as e:
+        logger.error(f"Error converting ChatModel to Chat: {e}")
+        raise ValueError("Invalid ChatModel data")
 
 
 def message_to_gql(message: MessageModel) -> Message:
-    return Message(
-        id=message.id,
-        chat_id=message.chat_id,
-        profile_id=message.profile_id,
-        role=message.role,
-        message=message.message,
-        created_at=message.created_at,
-    )
+    try:
+        return Message(
+            **{
+                field: getattr(message, field)
+                for field in [
+                    "id",
+                    "chat_id",
+                    "profile_id",
+                    "role",
+                    "message",
+                    "created_at",
+                ]
+            }
+        )
+    except AttributeError as e:
+        logger.error(f"Error converting MessageModel to Message: {e}")
+        raise ValueError("Invalid MessageModel data")
 
 
 class AvailablePrompts(Enum):
     v1 = "user_input_formatter_v1.md"
     v2 = "user_input_formatter_v2.md"
+    v3 = "user_input_formatter_v3.md"
 
 
 def get_prompt(prompt: AvailablePrompts):
     return get_file_contents(f"src/prompts/{prompt.value}")
 
 
-def analyze_user_input(transcript: str, model: str = "llama3-70b-8192"):
-    system_prompt = get_prompt(AvailablePrompts.v2)
+def analyze_user_input(transcript: str, model: str = "llama3-70b-8192") -> dict | None:
+    system_prompt = get_prompt(AvailablePrompts.v3)
 
     if model in open_source_models:
 
@@ -82,11 +94,11 @@ def analyze_user_input(transcript: str, model: str = "llama3-70b-8192"):
                 )
                 logger.info("focus_stats", statistics_to_return.get_stats())
 
-                return (
-                    json.loads(completion.choices[0].message.content)
-                    if completion.choices[0].message.content
-                    else None
-                )
+                if completion.choices[0].message.content:
+                    formatted: dict = json.loads(completion.choices[0].message.content)
+                    return formatted
+
+                return None
         except Exception as e:
             logger.error(f" ********* STATISTICS GENERATION error ******* : {e} ")
             return {"error": str(e)}
@@ -157,3 +169,9 @@ async def send_chat_message(
         user_message,
         system_message,
     ]
+
+
+# User sends text to Sherpa
+# Sherpa summarizes the text and sends it back to the user
+# User can respond and sherpa will continuously revise summary
+# Users can prioritize summary or save for later

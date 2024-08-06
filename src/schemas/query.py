@@ -1,11 +1,10 @@
-import json
 from typing import List
 import strawberry
 
 from src.data.data_access import get_user_context
 from src.data.notes import get_user_notes
 from src.resolvers.chat_resolvers import analyze_user_input, chats, chat_messages
-from src.resolvers.focus import Focus, convert_dict_to_focus
+from src.resolvers.focus import FocusOutput, convert_to_sherpa_item
 from src.resolvers.user_resolvers import GetProfileOutput, get_profile
 from src.schemas.types import Chat, Message, NoteOutput, User
 from src.utils.logger import logger
@@ -46,7 +45,7 @@ class Query:
         return User(id=current_user.id, email=current_user.email)
 
     @strawberry.field
-    async def focus(self, info: strawberry.Info) -> Focus:
+    async def focus(self, info: strawberry.Info) -> FocusOutput:
         """
         Returns notes structure content as well as total tokens and total time for generation.
         """
@@ -70,7 +69,12 @@ class Query:
                 )
             )
 
-            return convert_dict_to_focus(analysis)
+            if not analysis:
+                return FocusOutput(items=[])
+
+            items = analysis["items"]
+            converted_items = [convert_to_sherpa_item(item) for item in items]
+            return FocusOutput(items=converted_items)
         except Exception as e:
             logger.error(f" ********* ERROR IN USER PROMPT ********: {e} ***** ")
             raise Exception("Error retrieving user focus")
