@@ -1,10 +1,20 @@
 import io
+import profile
 import strawberry
 from strawberry.file_uploads import Upload
 from typing import List
+from src.data.models import Note
 
-from src.schemas.types import Message
-from src.services.sherpa_service import insert_message, get_sherpa_response
+from src.resolvers.user_resolvers import (
+    AuthPayload,
+    CreateUserPayload,
+    create_user_and_profile,
+    refresh_token,
+    save_apple_user,
+    update_profile,
+)
+from src.resolvers.chat_resolvers import send_chat_message
+from src.schemas.types import Message, UpdateProfilePayload, CreateNote
 from src.services.media import transcribe_audio, TranscribeAudioResponse
 from src.utils.logger import logger
 
@@ -14,13 +24,45 @@ class UploadVoiceNoteResponse(TranscribeAudioResponse):
     pass
 
 
+@strawberry.input
+class CreateNoteInput:
+    content: str
+
+
 @strawberry.type
 class Mutation:
+    create_user: CreateUserPayload = strawberry.field(resolver=create_user_and_profile)
+    save_apple_user: AuthPayload = strawberry.field(resolver=save_apple_user)
+    refresh_token: AuthPayload = strawberry.field(resolver=refresh_token)
+    update_profile: UpdateProfilePayload = strawberry.field(resolver=update_profile)
+    send_chat_message: List[Message] = strawberry.field(resolver=send_chat_message)
+
+    @strawberry.field
+    async def create_note(
+        self, info: strawberry.Info, input: CreateNoteInput
+    ) -> CreateNote:
+        current_user = info.context.get("user")
+        if not current_user:
+            raise Exception("Unauthorized")
+
+        session = info.context.get("session")
+        profile_id = info.context.get("profile").id
+        note = Note(content=input.content, profile_id=profile_id)
+        session.add(note)
+        session.commit()
+
+        note_dict = note.__dict__
+        return CreateNote(
+            id=note_dict["id"],
+            content=note_dict["content"],
+            created_at=note_dict["created_at"],
+        )
+
     @strawberry.field
     async def upload_voice_note(
         self, info: strawberry.Info, audio_file: Upload, chat_id: int
     ) -> UploadVoiceNoteResponse:
-        current_user = info.context.get("current_user")
+        current_user = info.context.get("user")
         if not current_user:
             raise Exception("Unauthorized")
 
@@ -31,31 +73,17 @@ class Mutation:
         logger.info(f"Transcription: {transcription.text}")
         return UploadVoiceNoteResponse(text=transcription.text, error=None)
 
-    @strawberry.field
-    async def send_chat_message(
-        self, info: strawberry.Info, chat_id: int, message: str
-    ) -> List[Message]:
-        current_user = info.context.get("current_user")
-        if not current_user:
-            raise Exception("Unauthorized")
 
-        # Insert new message into the database
-        user_message = insert_message(chat_id, message, current_user.id, "user")
+# @strawberry.type
+# class Subscription:
+#     @strawberry.subscription
+#     async def user_account_changed(self, info: Info) -> str:
+#         # Get the current user from the context
+#         user_id = info.context.get("user_id")
+#         if not user_id:
+#             raise ValueError("Not authenticated")
 
-        # Retrieve message from ChatGPT
-        sherpa_response = get_sherpa_response(message, chat_id, current_user.id)
-        if sherpa_response is None:
-            raise Exception("No response from the model")
-
-        # Save system response to the database
-        system_message = insert_message(
-            chat_id=chat_id,
-            user_id=current_user.id,
-            role="assistant",
-            message=sherpa_response,
-        )
-
-        return [
-            user_message,
-            system_message,
-        ]
+#         async with broadcast.subscribe(channel="user_changes") as subscriber:
+#             async for event in subscriber:
+#                 if event.message == str(user_id):
+#                     yield event.message

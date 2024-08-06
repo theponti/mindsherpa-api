@@ -1,5 +1,6 @@
 services:
-  web:
+  api:
+    container_name: mindsherpa_api
     build:
       context: .
       dockerfile: Dockerfile.dev
@@ -9,18 +10,25 @@ services:
       - .:/app
       - /app/__pycache__/
     command: uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+    depends_on:
+      - postgres
+
   postgres:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: postgres
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+    image: postgres:latest
+    container_name: mindsherpa_postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

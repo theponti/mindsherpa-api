@@ -1,4 +1,5 @@
 import enum
+from typing import List
 import strawberry
 
 
@@ -11,25 +12,23 @@ class MessageRole(enum.Enum):
 @strawberry.type
 class Profile:
     id: int
-    name: str | None
-    avatar_url: str | None
+    full_name: str | None
     user_id: str
 
 
 @strawberry.type
 class Chat:
-    id: int
+    id: str
     title: str
-    profile_id: str
     created_at: str
 
 
 @strawberry.type
 class Message:
-    id: int
+    id: str
     message: str
     role: MessageRole
-    chat_id: int
+    chat_id: str
     profile_id: str
     created_at: str
 
@@ -41,28 +40,42 @@ class ChatMessageInput:
 
 
 @strawberry.type
-class ChatMessageOutput:
+class NoteOutput:
+    id: str
     content: str
+    created_at: str
 
 
 @strawberry.type
-class Notebook:
-    title: str
+class CreateNote:
     id: str
-    created_at: str
-    updated_at: str
-    user_id: str
-
-
-@strawberry.type
-class Note:
     content: str
-    id: str
     created_at: str
-    user_id: str
 
 
 @strawberry.type
 class User:
     id: str
     email: str | None
+
+
+@strawberry.input
+class UpdateProfileInput:
+    full_name: str
+    user_id: str
+
+
+@strawberry.type
+class UpdateProfilePayload:
+    profile: Profile
+
+
+@strawberry.input
+class CreateUserInput:
+    email: str
+
+
+@strawberry.type
+class CreateUserPayload:
+    user: User
+    profile: Profile

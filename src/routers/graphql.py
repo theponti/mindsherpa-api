@@ -1,39 +1,44 @@
-# GraphQL endpoint
-from functools import cached_property
 from fastapi import Request
 import strawberry
-from strawberry.fastapi import GraphQLRouter, BaseContext
+from strawberry.fastapi import GraphQLRouter
 from typing import Any, AsyncGenerator
+from src.data.db import SessionLocal
 
 
+from src.resolvers.user_resolvers import get_current_user
 from src.schemas.query import Query
 from src.schemas.mutation import Mutation
-from src.schemas.types import User
-from src.services.auth import get_current_user
-
-
-class Context(BaseContext):
-    @cached_property
-    def user(self) -> User | None:
-        if not self.request:
-            return None
-
-        authorization = self.request.headers.get("Authorization", None)
-        if not authorization:
-            return None
-        token = authorization.split(" ")[1]
-        return get_current_user(token)
 
 
 async def get_context(request: Request) -> AsyncGenerator[dict[str, Any], None]:
+    session = SessionLocal()
     auth_header = request.headers.get("Authorization")
     current_user = None
+    profile = None
 
     if auth_header:
         token = auth_header.split(" ")[1]
-        current_user = get_current_user(token)
+        current_user, profile = get_current_user(session, token)
 
-    yield {"request": request, "current_user": current_user}
+    try:
+        if current_user and profile:
+            print(
+                "user",
+                {
+                    "user": current_user,
+                    "profile": profile,
+                },
+            )
+            yield {
+                "request": request,
+                "user": current_user,
+                "profile": profile,
+                "session": session,
+            }
+        else:
+            yield {"request": request, "session": session}
+    finally:
+        session.close()
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)

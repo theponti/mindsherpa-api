@@ -1,14 +1,11 @@
 import io
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, UploadFile
+from src.resolvers.chat_resolvers import analyze_user_input
 
 from src.utils.ai_models import audio_models
-from src.services.auth import get_current_user
 from src.services.groq_service import groq_client
 from src.services.media import transcribe_audio
 from src.services.openai_service import openai_client
-from src.services.sherpa_service import analyze_user_input
-from src.schemas.query import User
-
 
 media_router = APIRouter()
 
@@ -17,7 +14,6 @@ media_router = APIRouter()
 def transcription_route(
     audio_file: UploadFile,
     model: str = "openai",
-    current_user: User = Depends(get_current_user),
 ):
     """
     Transcribes audio using either OpenAI's whisper or Groq's Whisper API.

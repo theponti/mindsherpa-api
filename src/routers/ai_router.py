@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Form
 from fastapi.responses import StreamingResponse
-from src.services.sherpa_service import analyze_user_input
+from src.resolvers.chat_resolvers import analyze_user_input
 
 from src.utils.logger import logger
 from src.services.file_service import get_file_contents
