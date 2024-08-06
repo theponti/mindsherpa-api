@@ -1,9 +1,8 @@
 import io
-import profile
 import strawberry
 from strawberry.file_uploads import Upload
 from typing import List
-from src.data.models import Note
+from src.data.models import Note, Profile, User
 
 from src.resolvers.user_resolvers import (
     AuthPayload,
@@ -51,11 +50,10 @@ class Mutation:
         session.add(note)
         session.commit()
 
-        note_dict = note.__dict__
         return CreateNote(
-            id=note_dict["id"],
-            content=note_dict["content"],
-            created_at=note_dict["created_at"],
+            id=note.id,
+            content=note.content,
+            created_at=note.created_at,
         )
 
     @strawberry.field
@@ -72,6 +70,23 @@ class Mutation:
 
         logger.info(f"Transcription: {transcription.text}")
         return UploadVoiceNoteResponse(text=transcription.text, error=None)
+
+    @strawberry.field
+    async def sign_up_with_email(
+        self, info: strawberry.Info, email: str
+    ) -> CreateUserPayload:
+        if not email:
+            raise ValueError("Email is required")
+        if info.context.get("user"):
+            raise ValueError("Already authenticated")
+
+        session = info.context.get("session")
+        user = User(email=email)
+        session.add(user)
+        session.commit()
+
+        profile = Profile(user_id=user.id, provider="email")
+        return CreateUserPayload(user=user, profile=profile)
 
 
 # @strawberry.type
