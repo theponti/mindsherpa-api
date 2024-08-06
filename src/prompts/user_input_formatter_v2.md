@@ -185,7 +185,6 @@ Output:
       "type": "location",
       "value": "New York City",
       "location_type": "city",
-      "country": "USA"
     }
   ],
   "dates": [
@@ -202,3 +201,6 @@ Output:
   ]
 }
 ```
+
+Do not include any fields that are not explicitly mentioned in the user input!
+Ensure that the JSON object is well-structured, organized, and accurately represents the user's input!

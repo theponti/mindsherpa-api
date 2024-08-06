@@ -66,7 +66,7 @@ def analyze_user_input(transcript: str, model: str = "llama3-70b-8192"):
 
         except Exception as e:
             logger.error(f" ********* API error ********: {e} ***** ")
-            return None, {"error": str(e)}
+            return {"error": str(e)}
 
         try:
             if usage:
@@ -89,7 +89,7 @@ def analyze_user_input(transcript: str, model: str = "llama3-70b-8192"):
                 )
         except Exception as e:
             logger.error(f" ********* STATISTICS GENERATION error ******* : {e} ")
-            return None, {"error": str(e)}
+            return {"error": str(e)}
 
 
 async def chats(info: strawberry.Info) -> List[Chat]:

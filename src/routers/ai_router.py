@@ -36,22 +36,6 @@ async def stream_chat(message: str = Form(...)):
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
-@ai_router.post("/focus")
-def focus(transcript: str, model: str = "llama3-70b-8192"):
-    """
-    Returns notes structure content as well as total tokens and total time for generation.
-    """
-    if not transcript.strip():
-        return None, {"error": "No tasks provided in the transcript"}
-
-    try:
-        analysis = analyze_user_input(transcript)
-        return {"analysis": analysis}
-    except Exception as e:
-        logger.error(f" ********* ERROR IN USER PROMPT ********: {e} ***** ")
-        return None, {"error": str(e)}
-
-
 @ai_router.get("/test")
 def test():
     test_user_input = get_file_contents("src/prompts/test_user_input.md")
