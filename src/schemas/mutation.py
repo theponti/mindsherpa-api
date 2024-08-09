@@ -2,8 +2,8 @@ import io
 import strawberry
 from strawberry.file_uploads import Upload
 from typing import List
-from src.data.models.note import Note
-from src.data.models.user import Profile, User
+from src.data.models import Note
+from src.data.models import Profile, User
 
 from src.resolvers.user_resolvers import (
     AuthPayload,

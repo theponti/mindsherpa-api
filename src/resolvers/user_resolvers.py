@@ -6,7 +6,7 @@ import strawberry
 import uuid
 
 
-from src.data.models.user import User, Profile
+from src.data.models import User, Profile
 from src.resolvers.tokens import (
     RefreshTokenService,
     create_access_token,

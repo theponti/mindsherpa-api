@@ -66,12 +66,12 @@ class FocusItemTaskSize(Enum):
 @strawberry.type
 class FocusOutputItem:
     text: str
-    type: FocusItemType
-    task_size: FocusItemTaskSize
-    category: Category  # Use the Category enum
-    priority: Priority  # Use the Priority enum
-    sentiment: Sentiment  # Use the Sentiment enum
-    due_date: str  # Should be in YYYY-MM-DD format
+    type: str
+    task_size: str
+    category: str  
+    priority: str  
+    sentiment: str
+    due_date: str  
 
 
 @strawberry.type
@@ -79,13 +79,16 @@ class FocusOutput:
     items: List[FocusOutputItem]
 
 
-def convert_to_sherpa_item(data: Focus) -> FocusOutputItem:
-    return FocusOutputItem(
-        type=FocusItemType[str(data.type)],
-        task_size=FocusItemTaskSize[str(data.task_size)],
-        text=str(data.text),
-        category=Category(data.category),
-        priority=Priority(data.priority),
-        sentiment=Sentiment(data.sentiment),
-        due_date=str(data.due_date),
-    )
+def convert_to_sherpa_items(items: List[Focus]) -> List[FocusOutputItem]:
+    return [
+        FocusOutputItem(
+            type=data.type,
+            task_size=data.task_size,
+            text=data.text,
+            category=data.category,
+            priority=data.priority,
+            sentiment=data.sentiment,
+            due_date=data.due_date,
+        )
+        for data in items
+    ]

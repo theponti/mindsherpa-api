@@ -1,10 +1,12 @@
 from typing import List
+from sqlalchemy.orm import Session
 import strawberry
 
 from src.data.data_access import get_user_context
+from src.data.models import Focus
 from src.data.notes import get_user_notes
 from src.resolvers.chat_resolvers import chats, chat_messages
-from src.resolvers.focus import FocusOutput, convert_to_sherpa_item
+from src.resolvers.focus import FocusOutput, convert_to_sherpa_items
 from src.resolvers.user_resolvers import GetProfileOutput, get_profile
 from src.schemas.types import Chat, Message, NoteOutput, User
 from src.services.sherpa import generate_user_context
@@ -51,9 +53,14 @@ class Query:
         Returns notes structure content as well as total tokens and total time for generation.
         """
         current_user = info.context.get("user")
-
         if not current_user:
             raise Exception("Unauthorized")
+
+        session: Session = info.context.get("session")
+        profile_id = info.context.get("profile").id
+        stored_focus = session.query(Focus).filter_by(profile_id=profile_id).all()
+        if stored_focus:
+            return FocusOutput(items=convert_to_sherpa_items(stored_focus))
 
         try:
             transcript_base = """
@@ -66,6 +73,7 @@ class Query:
             profile_id = info.context.get("profile").id
             history = get_user_context(info.context.get("session"), profile_id)
             analysis = generate_user_context(
+                profile_id=profile_id,
                 session=info.context.get("session"),
                 transcript=transcript_base.format(
                     user_context=history.note_history, chat_history=history.chat_history
@@ -75,8 +83,7 @@ class Query:
             if not analysis:
                 return FocusOutput(items=[])
 
-            converted_items = [convert_to_sherpa_item(item) for item in analysis]
-            return FocusOutput(items=converted_items)
+            return FocusOutput(items=convert_to_sherpa_items(analysis))
         except Exception as e:
             logger.error(f" ********* ERROR IN USER PROMPT ********: {e} ***** ")
             raise Exception("Error retrieving user focus")

@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Form
 from fastapi.responses import StreamingResponse
 
-from src.data.db import Session
 from src.utils.logger import logger
-from src.services.sherpa import generate_user_context
 from src.services.file_service import get_file_contents
+from src.services.groq_service import groq_client
 from src.services.openai_service import openai_async_client
+from src.services.prompt_service import AvailablePrompts, get_prompt
 
 ai_router = APIRouter()
 
@@ -40,5 +40,19 @@ async def stream_chat(message: str = Form(...)):
 @ai_router.get("/test")
 def test():
     test_user_input = get_file_contents("src/prompts/test_user_input.md")
-    analysis = generate_user_context(test_user_input, session=Session())
-    return {"analysis": analysis}
+    system_prompt = get_prompt(AvailablePrompts.v3)
+
+    completion = groq_client.chat.completions.create(
+        model="llama3-70b-8192",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": test_user_input},
+        ],
+        temperature=0.3,
+        max_tokens=8000,
+        top_p=1,
+        stream=False,
+        response_format={"type": "json_object"},
+        stop=None,
+    )
+    return {"analysis": completion}

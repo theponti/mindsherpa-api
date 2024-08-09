@@ -2,7 +2,7 @@ import json
 from typing import List
 from sqlalchemy.orm import Session
 
-from src.data.models.focus import Focus
+from src.data.models import Focus
 from src.services.prompt_service import AvailablePrompts, get_prompt
 from src.services.groq_service import groq_client
 from src.utils.ai_models import open_source_models
@@ -25,6 +25,7 @@ def log_usage(model: str, usage):
 def generate_user_context(
     transcript: str,
     session: Session,
+    profile_id: str,
     model: str = "llama3-70b-8192",
 ) -> List[Focus] | None:
     system_prompt = get_prompt(AvailablePrompts.v3)
@@ -59,16 +60,13 @@ def generate_user_context(
                 for item in formatted["items"]:
                     create_item = Focus(
                         type=item["type"],
-                        state=item["state"],
                         task_size=item["task_size"],
                         text=item["text"],
                         category=item["category"],
                         priority=item["priority"],
                         sentiment=item["sentiment"],
                         due_date=item["due_date"],
-                        profile_id=item["profile_id"],
-                        created_at=item["created_at"],
-                        updated_at=item["updated_at"],
+                        profile_id=profile_id,
                     )
                     session.add(create_item)
                     created_items.append(create_item)

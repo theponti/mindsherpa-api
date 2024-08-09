@@ -2,7 +2,7 @@ from typing import List
 import strawberry
 
 from src.data.data_access import get_sherpa_response, insert_message
-from src.data.models.chat import Chat as ChatModel, Message as MessageModel
+from src.data.models import Chat as ChatModel, Message as MessageModel
 from src.schemas.types import Chat, Message
 from src.utils.logger import logger
 

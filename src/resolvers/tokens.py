@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from strawberry import Info
 from sqlalchemy.orm import Session
 
-from src.data.models.user import User
+from src.data.models import User
 from src.schemas.types import AuthPayload
 
 JWT_SECRET = os.environ.get("JWT_SECRET")
