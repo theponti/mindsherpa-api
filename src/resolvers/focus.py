@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List
+from typing import List, Optional
 import strawberry
 
 from src.data.models.focus import Focus
@@ -69,10 +69,10 @@ class FocusOutputItem:
     text: str
     type: str
     task_size: str
-    category: str  
-    priority: str  
+    category: str
+    priority: str
     sentiment: str
-    due_date: str  
+    due_date: Optional[str]
 
 
 @strawberry.type

@@ -1,6 +1,7 @@
 from datetime import date, UTC, datetime
 from pydantic import BaseModel, Field
 from sqlalchemy import UUID, Column, ForeignKey, Integer, String, Date
+from sqlalchemy.orm import MappedColumn, mapped_column
 from typing import Optional
 import uuid
 
@@ -16,8 +17,8 @@ class Focus(Base):
     state = Column(String, nullable=False, default="backlog")
     status = Column(String, nullable=False, default="active")
     task_size = Column(String, nullable=False, default="medium")
-    text = Column(String(255), nullable=False)
-    type = Column(String, nullable=False, default="task")
+    text: MappedColumn[str] = mapped_column(nullable=False)
+    type: MappedColumn[str] = mapped_column(nullable=False, default="task")
 
     # Relationships
     profile_id = Column(UUID, ForeignKey("profiles.id"), nullable=False)
