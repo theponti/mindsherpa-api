@@ -1,7 +1,7 @@
 from typing import List
 from sqlalchemy.orm import Session
 
-from src.data.models import Note
+from src.data.models.note import Note
 
 
 def get_user_notes(session: Session, profile_id: str) -> List[Note]:

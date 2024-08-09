@@ -2,6 +2,8 @@ from enum import Enum
 from typing import List
 import strawberry
 
+from src.data.models.focus import Focus
+
 
 @strawberry.enum
 class Category(Enum):
@@ -41,28 +43,31 @@ class Sentiment(Enum):
     NEUTRAL = "neutral"
     NEGATIVE = "negative"
 
+
 @strawberry.enum
-class SherpaItemType(Enum):
-    EVENT = 'event'
-    TASK = 'task'
+class FocusItemType(Enum):
+    EVENT = "event"
+    TASK = "task"
     GOAL = "goal"
     REMINDER = "reminder"
     NOTE = "note"
     FEELING = "FEELING"
     REQUEST = "REQUEST"
 
+
 @strawberry.enum
-class SherpaItemTaskSize(Enum):
+class FocusItemTaskSize(Enum):
     SMALL = "small"
     MEDIUM = "medium"
     LARGE = "large"
     EPIC = "epic"
 
+
 @strawberry.type
-class SherpaItem:
+class FocusOutputItem:
     text: str
-    type: SherpaItemType
-    task_size: SherpaItemTaskSize
+    type: FocusItemType
+    task_size: FocusItemTaskSize
     category: Category  # Use the Category enum
     priority: Priority  # Use the Priority enum
     sentiment: Sentiment  # Use the Sentiment enum
@@ -71,16 +76,16 @@ class SherpaItem:
 
 @strawberry.type
 class FocusOutput:
-    items: List[SherpaItem]
+    items: List[FocusOutputItem]
 
 
-def convert_to_sherpa_item(data: dict) -> SherpaItem:
-    return SherpaItem(
-        type=data["type"],
-        task_size=data["task_size"],
-        text=data["text"],
-        category=Category(data["category"]),
-        priority=Priority(data["priority"]),
-        sentiment=Sentiment(data["sentiment"]),
-        due_date=data["due_date"],
+def convert_to_sherpa_item(data: Focus) -> FocusOutputItem:
+    return FocusOutputItem(
+        type=FocusItemType[str(data.type)],
+        task_size=FocusItemTaskSize[str(data.task_size)],
+        text=str(data.text),
+        category=Category(data.category),
+        priority=Priority(data.priority),
+        sentiment=Sentiment(data.sentiment),
+        due_date=str(data.due_date),
     )

@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from sqlalchemy.orm import Session
-from typing import List, dataclass_transform
+from typing import List
 
-from src.data.models import Message
+from src.data.models.chat import Message
 from src.data.notes import get_user_notes
 from src.services.openai_service import openai_client
 

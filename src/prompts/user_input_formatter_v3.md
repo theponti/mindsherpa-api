@@ -36,6 +36,11 @@
   - `feeling`: An emotion or attitude (e.g., happy, angry, excited)
   - `request`: An action the user wants the system to perform (e.g., help with a task, provide information)
 
+- `state`
+  - `backlog`: 
+  - `not_completed`
+  - `completed`:
+
 - `task_size`:
 
   - `small`: A task that can be completed in a short amount of time (e.g., reply to an email, make a phone call)
@@ -93,6 +98,10 @@
     - `positive`: Indicates enthusiasm, motivation, excitement, or optimism.
     - `neutral`: Indicates a balanced, factual, or indifferent attitude.
     - `negative`: Indicates concern, stress, frustration, or reluctance.
+
+
+
+
 
 - `due_date`: Provide a realistic future date in YYYY-MM-DD format.
   - Use exact dates mentioned in the input when available.

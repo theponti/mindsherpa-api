@@ -2,13 +2,13 @@ import io
 import strawberry
 from strawberry.file_uploads import Upload
 from typing import List
-from src.data.models import Note, Profile, User
+from src.data.models.note import Note
+from src.data.models.user import Profile, User
 
 from src.resolvers.user_resolvers import (
     AuthPayload,
     CreateUserPayload,
     create_user_and_profile,
-    refresh_token,
     save_apple_user,
     update_profile,
 )
@@ -32,7 +32,6 @@ class CreateNoteInput:
 class Mutation:
     create_user: CreateUserPayload = strawberry.field(resolver=create_user_and_profile)
     save_apple_user: AuthPayload = strawberry.field(resolver=save_apple_user)
-    refresh_token: AuthPayload = strawberry.field(resolver=refresh_token)
     update_profile: UpdateProfilePayload = strawberry.field(resolver=update_profile)
     send_chat_message: List[Message] = strawberry.field(resolver=send_chat_message)
 

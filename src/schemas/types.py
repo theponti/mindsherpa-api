@@ -1,6 +1,12 @@
 import enum
-from typing import List
 import strawberry
+
+
+@strawberry.type
+class AuthPayload:
+    user_id: int
+    access_token: str
+    refresh_token: str
 
 
 @strawberry.enum

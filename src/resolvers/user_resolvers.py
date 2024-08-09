@@ -1,26 +1,24 @@
-from datetime import datetime, timedelta
 from fastapi import HTTPException
 from jwt.exceptions import InvalidTokenError
 from sqlalchemy.orm import Session
 from strawberry.types import Info
-import jwt
-import os
 import strawberry
 import uuid
 
 
-from src.data.models import User, Profile
+from src.data.models.user import User, Profile
+from src.resolvers.tokens import (
+    RefreshTokenService,
+    create_access_token,
+    verify_apple_token,
+)
 from src.services.supabase import supabase_client
-from src.schemas.types import CreateUserInput, CreateUserPayload, UpdateProfileInput
-
-JWT_SECRET = os.environ.get("JWT_SECRET")
-if not JWT_SECRET:
-    raise ValueError("JWT_SECRET environment variable is not set")
-
-
-JWT_ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-REFRESH_TOKEN_EXPIRE_DAYS = 30
+from src.schemas.types import (
+    AuthPayload,
+    CreateUserInput,
+    CreateUserPayload,
+    UpdateProfileInput,
+)
 
 
 def get_current_user(session: Session, token: str) -> tuple[User, Profile]:
@@ -48,35 +46,6 @@ def get_current_user(session: Session, token: str) -> tuple[User, Profile]:
         session.commit()
 
     return User(id=response.user.id, email=response.user.email), profile
-
-
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-
-def create_refresh_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-
-def verify_apple_token(id_token: str, nonce: str) -> dict:
-    # Implement Apple ID token verification here
-    # This should validate the token with Apple's public key and verify the nonce
-    # Return the decoded token payload if valid, raise an exception if not
-    # For brevity, we're assuming the token is valid in this example
-    return {"sub": "example_apple_id", "email": "user@example.com"}
-
-
-@strawberry.type
-class AuthPayload:
-    user_id: int
-    access_token: str
-    refresh_token: str
 
 
 async def save_apple_user(info: Info, id_token: str, nonce: str) -> AuthPayload:
@@ -107,31 +76,10 @@ async def save_apple_user(info: Info, id_token: str, nonce: str) -> AuthPayload:
 
     # Create access and refresh tokens
     access_token = create_access_token({"sub": str(user.id)})
-    refresh_token = create_refresh_token({"sub": str(user.id)})
+    refresh_token = RefreshTokenService.create_refresh_token({"sub": str(user.id)})
 
     return AuthPayload(
         user_id=user.id, access_token=access_token, refresh_token=refresh_token
-    )
-
-
-async def refresh_token(info: Info, refresh_token: str) -> AuthPayload:
-    try:
-        payload = jwt.decode(refresh_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user_id = int(payload["sub"])
-    except (InvalidTokenError, ValueError):
-        raise ValueError("Invalid refresh token")
-
-    session: Session = info.context["session"]
-    user = session.query(User).filter(User.id == user_id).first()
-
-    if user is None:
-        raise ValueError("User not found")
-
-    access_token = create_access_token({"sub": str(user.id)})
-    new_refresh_token = create_refresh_token({"sub": str(user.id)})
-
-    return AuthPayload(
-        user_id=user.id, access_token=access_token, refresh_token=new_refresh_token
     )
 
 

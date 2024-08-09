@@ -3,10 +3,11 @@ import strawberry
 
 from src.data.data_access import get_user_context
 from src.data.notes import get_user_notes
-from src.resolvers.chat_resolvers import analyze_user_input, chats, chat_messages
+from src.resolvers.chat_resolvers import chats, chat_messages
 from src.resolvers.focus import FocusOutput, convert_to_sherpa_item
 from src.resolvers.user_resolvers import GetProfileOutput, get_profile
 from src.schemas.types import Chat, Message, NoteOutput, User
+from src.services.sherpa import generate_user_context
 from src.utils.logger import logger
 
 
@@ -55,25 +56,26 @@ class Query:
             raise Exception("Unauthorized")
 
         try:
-            profile_id = info.context.get("profile").id
-            history = get_user_context(info.context.get("session"), profile_id)
-            analysis = analyze_user_input(
-                """
+            transcript_base = """
             ### User Context:
             {user_context}
 
             ### Chat History:
             {chat_history}
-            """.format(
+            """
+            profile_id = info.context.get("profile").id
+            history = get_user_context(info.context.get("session"), profile_id)
+            analysis = generate_user_context(
+                session=info.context.get("session"),
+                transcript=transcript_base.format(
                     user_context=history.note_history, chat_history=history.chat_history
-                )
+                ),
             )
 
             if not analysis:
                 return FocusOutput(items=[])
 
-            items = analysis["items"]
-            converted_items = [convert_to_sherpa_item(item) for item in items]
+            converted_items = [convert_to_sherpa_item(item) for item in analysis]
             return FocusOutput(items=converted_items)
         except Exception as e:
             logger.error(f" ********* ERROR IN USER PROMPT ********: {e} ***** ")

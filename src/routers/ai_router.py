@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Form
 from fastapi.responses import StreamingResponse
-from src.resolvers.chat_resolvers import analyze_user_input
 
+from src.data.db import Session
 from src.utils.logger import logger
+from src.services.sherpa import generate_user_context
 from src.services.file_service import get_file_contents
 from src.services.openai_service import openai_async_client
 
@@ -39,5 +40,5 @@ async def stream_chat(message: str = Form(...)):
 @ai_router.get("/test")
 def test():
     test_user_input = get_file_contents("src/prompts/test_user_input.md")
-    analysis = analyze_user_input(test_user_input)
+    analysis = generate_user_context(test_user_input, session=Session())
     return {"analysis": analysis}
