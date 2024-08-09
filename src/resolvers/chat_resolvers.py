@@ -1,15 +1,19 @@
-from typing import List
+from typing import Annotated, List, Required
 import strawberry
+from sqlalchemy.orm import Session
 
+from src.data.models import Focus, Chat, ChatState
 from src.data.data_access import get_sherpa_response, insert_message
 from src.data.models import Chat as ChatModel, Message as MessageModel
-from src.schemas.types import Chat, Message
+from src.schemas.types import Chat as ChatType, Message
 from src.utils.logger import logger
+from src.services.focus import get_focus_by_profile_id
+from src.services.sherpa import get_focus_items_from_text
+from src.resolvers.focus import FocusOutputItem
 
-
-def chat_to_gql(chat: ChatModel) -> Chat:
+def chat_to_gql(chat: ChatModel) -> ChatType:
     try:
-        return Chat(
+        return ChatType(
             **{field: getattr(chat, field) for field in ["id", "title", "created_at"]}
         )
     except AttributeError as e:
@@ -59,14 +63,30 @@ async def chats(info: strawberry.Info) -> List[Chat]:
     return [chat_to_gql(chat) for chat in chats]
 
 
-async def chat_messages(info: strawberry.Info, chat_id: str) -> List[Message]:
+@strawberry.type
+class ChatSummaryOutputItem:
+    text: str
+
+@strawberry.type
+class ChatMessagesResponse:
+    messages: List[Message]
+    summary: List[ChatSummaryOutputItem]
+    
+async def chat_messages(info: strawberry.Info, chat_id: str) -> ChatMessagesResponse:
     if not info.context.get("user"):
         raise Exception("Unauthorized")
 
     session = info.context.get("session")
+    profile_id = info.context.get("profile").id
     messages = session.query(MessageModel).filter(MessageModel.chat_id == chat_id).all()
+    chat_summary = get_chat_summary(messages=messages, profile_id=profile_id, session=session)
+    
+    logger.info("Chat summary", {"summary": chat_summary})
+    return ChatMessagesResponse(
+        messages=[message_to_gql(message) for message in messages],
+        summary=[ChatSummaryOutputItem(text=c["text"]) for c in chat_summary]
+    )
 
-    return [message_to_gql(message) for message in messages]
 
 
 async def send_chat_message(
@@ -103,8 +123,41 @@ async def send_chat_message(
         system_message,
     ]
 
+async def end_chat(info: strawberry.Info, chat_id: str) -> dict:
+    if not info.context.get("user"):
+        raise Exception("Unauthorized")
 
-# User sends text to Sherpa
-# Sherpa summarizes the text and sends it back to the user
-# User can respond and sherpa will continuously revise summary
-# Users can prioritize summary or save for later
+    session = info.context.get("session")
+    chat: ChatModel = session.query(ChatModel).filter(ChatModel.id == chat_id).first()
+
+    if chat is None:
+        raise ValueError("Chat not found")
+
+    chat.state = ChatState.ENDED
+    session.add(chat)
+    
+    chat_history: List[MessageModel] = session.query(MessageModel).filter(MessageModel.chat_id == chat_id).all()
+    chat_summary = get_chat_summary(session=session, messages=chat_history, profile_id=chat.profile_id)
+    if not chat_summary:
+        return { "error": "The chat could not have a summary generated." }
+    
+    session.commit()
+    return chat_summary
+
+
+
+def get_chat_summary(messages: List[MessageModel], profile_id: Annotated[str, Required], session: Session) -> List[Focus]:
+    existing_focus_items = get_focus_by_profile_id(profile_id=profile_id, session=session)
+    transcript = """
+    Analyze the chat transcript. Do not include any existing items in the focus list.
+
+    ### Existing Items
+    {existing_items}
+
+    ### Chat Transcript
+    {chat_history}
+    """.format(
+        existing_items="\n".join([f"{item.type.capitalize()}: {item.text}" for item in existing_focus_items]),
+        chat_history="\n".join([f"{message.role.capitalize()}: {message.message}" for message in messages])
+    )
+    return get_focus_items_from_text(text=transcript)

@@ -1,5 +1,5 @@
 from src.data.models.action import Action
-from src.data.models.chat import Chat, Message
+from src.data.models.chat import Chat, ChatState, Message
 from src.data.models.context import Context, SystemState
 from src.data.models.entity import Entity
 from src.data.models.entity_memory import EntityMemory

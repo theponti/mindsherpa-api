@@ -1,13 +1,15 @@
+import enum
 from datetime import datetime
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, String, UUID, func
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, DateTime, ForeignKey, String, UUID, func
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from src.data.db import Base
 
 
-class ChatState(Enum):
+class ChatState(enum.Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
+    ENDED = "ended"
 
 class Chat(Base):
     __tablename__ = "chats"
@@ -15,10 +17,21 @@ class Chat(Base):
         UUID(as_uuid=True), primary_key=True, server_default=func.uuid_generate_v4()
     )
     title = Column(String, nullable=False)
-    profile_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"))
-    state = Column(ChatState, nullable=False, default="active")
+    profile_id: Mapped[UUID] = mapped_column(ForeignKey("profiles.id"))
+    state: Mapped[ChatState] = mapped_column(nullable=False, default="active")
+
+    # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    def to_json(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "profile_id": self.profile_id,
+            "state": self.state,
+            "created_at": self.created_at,
+        }
+    
     def __repr__(self):
         return f"<Chat(id={self.id}, title={self.title})>"
 

@@ -5,7 +5,7 @@ import strawberry
 from src.data.data_access import get_user_context
 from src.data.models import Focus
 from src.data.notes import get_user_notes
-from src.resolvers.chat_resolvers import chats, chat_messages
+from src.resolvers.chat_resolvers import chats, chat_messages, ChatMessagesResponse
 from src.resolvers.focus import FocusOutput, convert_to_sherpa_items
 from src.resolvers.user_resolvers import GetProfileOutput, get_profile
 from src.schemas.types import Chat, Message, NoteOutput, User
@@ -16,7 +16,7 @@ from src.utils.logger import logger
 @strawberry.type
 class Query:
     chats: List[Chat] = strawberry.field(resolver=chats)
-    chat_messages: List[Message] = strawberry.field(resolver=chat_messages)
+    chat_messages: ChatMessagesResponse = strawberry.field(resolver=chat_messages)
     profile: GetProfileOutput = strawberry.field(resolver=get_profile)
 
     @strawberry.field
