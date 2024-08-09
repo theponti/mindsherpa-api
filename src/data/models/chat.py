@@ -1,9 +1,13 @@
 from datetime import datetime
-from sqlalchemy import Column, DateTime, ForeignKey, String, UUID, func
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, String, UUID, func
 from sqlalchemy.orm import relationship
 
 from src.data.db import Base
 
+
+class ChatState(Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
 
 class Chat(Base):
     __tablename__ = "chats"
@@ -12,6 +16,7 @@ class Chat(Base):
     )
     title = Column(String, nullable=False)
     profile_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"))
+    state = Column(ChatState, nullable=False, default="active")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     def __repr__(self):

@@ -65,6 +65,7 @@ class FocusItemTaskSize(Enum):
 
 @strawberry.type
 class FocusOutputItem:
+    id: str
     text: str
     type: str
     task_size: str
@@ -82,6 +83,7 @@ class FocusOutput:
 def convert_to_sherpa_items(items: List[Focus]) -> List[FocusOutputItem]:
     return [
         FocusOutputItem(
+            id=data.id,
             type=data.type,
             task_size=data.task_size,
             text=data.text,
