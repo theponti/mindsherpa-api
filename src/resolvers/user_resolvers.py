@@ -143,62 +143,19 @@ async def update_profile(info: Info, input: UpdateProfileInput) -> Profile:
 
     return profile
 
+async def sign_up_with_email(
+        self, info: strawberry.Info, email: str
+    ) -> CreateUserPayload:
+        if info.context.get("user"):
+            raise ValueError("Already authenticated")
 
-# async def sign_out(info: Info) -> bool:
-#     # Get the current user from the context
-#     user_id = info.context.get("user_id")
-#     if not user_id:
-#         raise ValueError("Not authenticated")
+        if not email:
+            raise ValueError("Email is required")
 
-#     session: Session = info.context["session"]
+        session = info.context.get("session")
+        user = User(email=email)
+        session.add(user)
+        session.commit()
 
-#     # Revoke all refresh tokens for the user
-#     session.query(RefreshToken).filter(
-#         RefreshToken.user_id == user_id,
-#         RefreshToken.revoked.is_(None)
-#     ).update({"revoked": datetime.utcnow()})
-
-#     session.commit()
-
-#     # Notify subscribers about the account change
-#     await broadcast.publish(channel="user_changes", message=str(user_id))
-
-#     return True
-
-# @strawberry.mutation
-# async def revoke_token(info: Info, refresh_token: str) -> bool:
-#     try:
-#         # Verify the token
-#         payload = verify_jwt_token(refresh_token)
-#         user_id = int(payload["sub"])
-#     except (jwt.InvalidTokenError, ValueError):
-#         raise ValueError("Invalid refresh token")
-
-#     session: Session = info.context["session"]
-
-#     # Find and revoke the token
-#     token = session.query(RefreshToken).filter(
-#         RefreshToken.user_id == user_id,
-#         RefreshToken.token == refresh_token,
-#         RefreshToken.revoked.is_(None)
-#     ).first()
-
-#     if token:
-#         token.revoked = datetime.utcnow()
-#         session.commit()
-
-#         # Notify subscribers about the account change
-#         await broadcast.publish(channel="user_changes", message=str(user_id))
-
-#         return True
-#     else:
-#         return False
-
-
-# # Setup function to initialize the broadcast client
-# async def init_broadcast():
-#     await broadcast.connect()
-
-# # Cleanup function to close the broadcast client
-# async def cleanup_broadcast():
-#     await broadcast.disconnect()
+        profile = Profile(user_id=user.id, provider="email")
+        return CreateUserPayload(user=user, profile=profile)

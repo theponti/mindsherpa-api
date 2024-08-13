@@ -53,13 +53,6 @@ class NoteOutput:
 
 
 @strawberry.type
-class CreateNote:
-    id: str
-    content: str
-    created_at: str
-
-
-@strawberry.type
 class User:
     id: str
     email: str | None

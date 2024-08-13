@@ -9,7 +9,7 @@ from src.schemas.types import Chat as ChatType, Message
 from src.utils.logger import logger
 from src.services.focus import get_focus_by_profile_id
 from src.services.sherpa import get_focus_items_from_text
-from src.resolvers.focus import FocusOutputItem
+
 
 def chat_to_gql(chat: ChatModel) -> ChatType:
     try:
@@ -145,7 +145,6 @@ async def end_chat(info: strawberry.Info, chat_id: str) -> dict:
     return chat_summary
 
 
-
 def get_chat_summary(messages: List[MessageModel], profile_id: Annotated[str, Required], session: Session) -> List[Focus]:
     existing_focus_items = get_focus_by_profile_id(profile_id=profile_id, session=session)
     transcript = """
@@ -161,3 +160,4 @@ def get_chat_summary(messages: List[MessageModel], profile_id: Annotated[str, Re
         chat_history="\n".join([f"{message.role.capitalize()}: {message.message}" for message in messages])
     )
     return get_focus_items_from_text(text=transcript)
+

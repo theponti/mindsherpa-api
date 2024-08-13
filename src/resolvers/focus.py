@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import List, Optional
+from sqlalchemy.orm import Session
 import strawberry
 
 from src.data.models.focus import Focus
@@ -65,7 +66,7 @@ class FocusItemTaskSize(Enum):
 
 @strawberry.type
 class FocusOutputItem:
-    id: str
+    id: int
     text: str
     type: str
     task_size: str
@@ -94,3 +95,24 @@ def convert_to_sherpa_items(items: List[Focus]) -> List[FocusOutputItem]:
         )
         for data in items
     ]
+
+@strawberry.input
+class DeleteFocusItemInput:
+    id: int
+
+@strawberry.type
+class DeleteFocusItemOutput:
+    success: bool
+
+async def delete_focus_item(info: strawberry.Info, input: DeleteFocusItemInput) -> DeleteFocusItemOutput:
+    if not info.context.get("user"):
+        raise Exception("Unauthorized")
+
+    session: Session = info.context.get("session")
+    note = session.query(Focus).filter(Focus.id == input.id).first()
+    if not note:
+        return DeleteFocusItemOutput(success=False)
+
+    session.delete(note)
+    session.commit()
+    return DeleteFocusItemOutput(success=True)
