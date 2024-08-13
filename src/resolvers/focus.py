@@ -123,7 +123,7 @@ async def delete_focus_item(info: strawberry.Info, input: DeleteFocusItemInput) 
 
 @strawberry.input
 class GetFocusFilter:
-    category: Optional[Category] = None
+    category: str
 
 async def get_focus_items(info: strawberry.Info, filter: Optional[GetFocusFilter] = None) -> FocusOutput:
         """
@@ -137,7 +137,7 @@ async def get_focus_items(info: strawberry.Info, filter: Optional[GetFocusFilter
         profile_id = info.context.get("profile").id
         
         if filter and filter.category:
-            stored_focus = session.query(Focus).filter_by(profile_id=profile_id, category=filter.category.value).all()
+            stored_focus = session.query(Focus).filter_by(profile_id=profile_id, category=filter.category).all()
         else:
             stored_focus = session.query(Focus).filter_by(profile_id=profile_id).all()
         if stored_focus:
