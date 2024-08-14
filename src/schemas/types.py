@@ -23,13 +23,6 @@ class Profile:
 
 
 @strawberry.type
-class Chat:
-    id: str
-    title: str
-    created_at: str
-
-
-@strawberry.type
 class Message:
     id: str
     message: str
@@ -37,12 +30,6 @@ class Message:
     chat_id: str
     profile_id: str
     created_at: str
-
-
-@strawberry.type
-class ChatMessageInput:
-    chat_id: int
-    message: str
 
 
 @strawberry.type

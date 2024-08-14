@@ -1,7 +1,5 @@
 import os
-
 from openai import AsyncOpenAI, OpenAI
-
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
 

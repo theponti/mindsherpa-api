@@ -5,6 +5,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain.prompts import PromptTemplate
 
 from src.data.models import Focus
+from src.data.data_access import get_chat_history, get_user_notes
 from src.services.groq_service import groq_client, groq_chat
 from src.services.llm_output_types import LLMFocusOutput
 from src.services.prompt_service import AvailablePrompts, get_prompt
@@ -116,3 +117,32 @@ def process_user_input(user_input: str) -> LLMFocusOutput:
         with_due_dates.append(item)
     
     return with_due_dates
+
+
+def get_sherpa_response(
+    session: Session, message: str, chat_id, profile_id
+) -> str | None:
+    system_prompt = get_prompt(AvailablePrompts.SherpaChatResponse)
+
+    chat_history = get_chat_history(session, chat_id)
+    user_context = get_user_notes(session, profile_id)
+    chat_history_contents = [message.message for message in chat_history]
+    user_context_contents = [note.content for note in user_context]
+
+    # Create the LLM chain
+    parser = JsonOutputParser(pydantic_object=LLMFocusOutput)
+    prompt_template = PromptTemplate(
+        template=system_prompt,
+        input_variables=["user_context", "chat_history"],
+        partial_variables={"format_instructions": parser.get_format_instructions()}
+    )
+
+    # Get the LLM response
+    chain = prompt_template | groq_chat | parser
+    llm_response = chain.invoke({
+        "user_contents": user_context_contents.join("\n"), 
+        "chat_history": chat_history_contents.join("\n"),
+        "user_input": message
+    })
+    
+    return llm_response

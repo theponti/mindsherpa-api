@@ -2,24 +2,13 @@ from typing import Annotated, List, Required
 import strawberry
 from sqlalchemy.orm import Session
 
-from src.data.models import Focus, Chat, ChatState
-from src.data.data_access import get_sherpa_response, insert_message
-from src.data.models import Chat as ChatModel, Message as MessageModel
-from src.schemas.types import Chat as ChatType, Message
+from src.data.models.chat import Chat, ChatOutput, ChatState, Message as MessageModel
+from src.data.models.focus import Focus
+from src.data.data_access import insert_message
+from src.schemas.types import Message
 from src.utils.logger import logger
 from src.services.focus import get_focus_by_profile_id
-from src.services.sherpa import get_focus_items_from_text
-
-
-def chat_to_gql(chat: ChatModel) -> ChatType:
-    try:
-        return ChatType(
-            **{field: getattr(chat, field) for field in ["id", "title", "created_at"]}
-        )
-    except AttributeError as e:
-        logger.error(f"Error converting ChatModel to Chat: {e}")
-        raise ValueError("Invalid ChatModel data")
-
+from src.services.sherpa import get_focus_items_from_text, get_sherpa_response
 
 def message_to_gql(message: MessageModel) -> Message:
     try:
@@ -41,26 +30,26 @@ def message_to_gql(message: MessageModel) -> Message:
         raise ValueError("Invalid MessageModel data")
 
 
-async def chats(info: strawberry.Info) -> List[Chat]:
+async def chats(info: strawberry.Info) -> List[ChatOutput]:
     if not info.context.get("user"):
         raise Exception("Unauthorized")
 
     session = info.context.get("session")
     profile_id = info.context.get("profile").id
-    chats = session.query(ChatModel).filter(ChatModel.profile_id == profile_id).all()
+    chats = session.query(Chat).filter(Chat.profile_id == profile_id).all()
 
     if len(chats) == 0:
         # Create a new chat if none exists
-        new_chat = ChatModel(
+        new_chat = Chat(
             title="New Chat",
             profile_id=profile_id,
         )
         session.add(new_chat)
         session.commit()
 
-        return [chat_to_gql(new_chat)]
+        return [new_chat.to_gql()]
 
-    return [chat_to_gql(chat) for chat in chats]
+    return [chat.to_gql() for chat in chats]
 
 
 @strawberry.type
@@ -128,7 +117,7 @@ async def end_chat(info: strawberry.Info, chat_id: str) -> dict:
         raise Exception("Unauthorized")
 
     session = info.context.get("session")
-    chat: ChatModel = session.query(ChatModel).filter(ChatModel.id == chat_id).first()
+    chat: Chat = session.query(Chat).filter(Chat.id == chat_id).first()
 
     if chat is None:
         raise ValueError("Chat not found")

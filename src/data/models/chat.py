@@ -2,9 +2,16 @@ import enum
 from datetime import datetime
 from sqlalchemy import Column, DateTime, ForeignKey, String, UUID, func
 from sqlalchemy.orm import relationship, Mapped, mapped_column
+import strawberry
 
 from src.data.db import Base
+from src.utils.logger import logger
 
+@strawberry.type
+class ChatOutput:
+    id: str
+    title: str
+    created_at: str
 
 class ChatState(enum.Enum):
     ACTIVE = "active"
@@ -32,6 +39,15 @@ class Chat(Base):
             "created_at": self.created_at,
         }
     
+    def to_gql(self) -> ChatOutput:
+        try:
+            return ChatOutput(
+                **{field: getattr(self, field) for field in ["id", "title", "created_at"]}
+            )
+        except AttributeError as e:
+            logger.error(f"Error converting ChatModel to Chat: {e}")
+            raise ValueError("Invalid ChatModel data")
+
     def __repr__(self):
         return f"<Chat(id={self.id}, title={self.title})>"
 
