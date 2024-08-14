@@ -7,6 +7,7 @@ class AvailablePrompts(Enum):
     v1 = "user_input_formatter_v1.md"
     v2 = "user_input_formatter_v2.md"
     v3 = "user_input_formatter_v3.md"
+    v4 = "user_input_formatter_v4.md"
 
 
 def get_prompt(prompt: AvailablePrompts):

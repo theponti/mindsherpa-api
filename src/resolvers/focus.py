@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 import strawberry
 
 from src.data.data_access import get_user_context
-from src.data.models.focus import Focus
+from src.data.models.focus import Focus, FocusOutputItem
 from src.services.sherpa import generate_user_context
 from src.utils.logger import logger
 
@@ -66,38 +66,9 @@ class FocusItemTaskSize(Enum):
     LARGE = "large"
     EPIC = "epic"
 
-
-@strawberry.type
-class FocusOutputItem:
-    id: int
-    text: str
-    type: str
-    task_size: str
-    category: str
-    priority: str
-    sentiment: str
-    due_date: Optional[str]
-
-
 @strawberry.type
 class FocusOutput:
     items: List[FocusOutputItem]
-
-
-def convert_to_sherpa_items(items: List[Focus]) -> List[FocusOutputItem]:
-    return [
-        FocusOutputItem(
-            id=data.id,
-            type=data.type,
-            task_size=data.task_size,
-            text=data.text,
-            category=data.category,
-            priority=data.priority,
-            sentiment=data.sentiment,
-            due_date=data.due_date,
-        )
-        for data in items
-    ]
 
 @strawberry.input
 class DeleteFocusItemInput:
@@ -141,7 +112,7 @@ async def get_focus_items(info: strawberry.Info, filter: Optional[GetFocusFilter
         else:
             stored_focus = session.query(Focus).filter_by(profile_id=profile_id).all()
         if stored_focus:
-            return FocusOutput(items=convert_to_sherpa_items(stored_focus))
+            return FocusOutput(items=[item.to_output_item() for item in stored_focus])
 
         try:
             transcript_base = """
@@ -153,7 +124,7 @@ async def get_focus_items(info: strawberry.Info, filter: Optional[GetFocusFilter
             """
             profile_id = info.context.get("profile").id
             history = get_user_context(info.context.get("session"), profile_id)
-            analysis = generate_user_context(
+            focus_items = generate_user_context(
                 profile_id=profile_id,
                 session=info.context.get("session"),
                 transcript=transcript_base.format(
@@ -161,10 +132,10 @@ async def get_focus_items(info: strawberry.Info, filter: Optional[GetFocusFilter
                 ),
             )
 
-            if not analysis:
+            if not focus_items:
                 return FocusOutput(items=[])
 
-            return FocusOutput(items=convert_to_sherpa_items(analysis))
+            return FocusOutput(items=[item.to_output_item() for item in focus_items])
         except Exception as e:
             logger.error(f" ********* ERROR IN USER PROMPT ********: {e} ***** ")
             raise Exception("Error retrieving user focus")

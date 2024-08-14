@@ -3,9 +3,8 @@ from fastapi.responses import StreamingResponse
 
 from src.utils.logger import logger
 from src.services.file_service import get_file_contents
-from src.services.groq_service import groq_client
+from src.services.sherpa import process_user_input
 from src.services.openai_service import openai_async_client
-from src.services.prompt_service import AvailablePrompts, get_prompt
 
 ai_router = APIRouter()
 
@@ -37,22 +36,13 @@ async def stream_chat(message: str = Form(...)):
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
+@ai_router.post("/sherpa/focus")
+def sherpa_focus_item(input: str = Form(...)):
+    completion = process_user_input(input)
+    return completion
+
 @ai_router.get("/test")
 def test():
     test_user_input = get_file_contents("src/prompts/test_user_input.md")
-    system_prompt = get_prompt(AvailablePrompts.v3)
-
-    completion = groq_client.chat.completions.create(
-        model="llama3-70b-8192",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": test_user_input},
-        ],
-        temperature=0.3,
-        max_tokens=8000,
-        top_p=1,
-        stream=False,
-        response_format={"type": "json_object"},
-        stop=None,
-    )
+    completion = process_user_input(test_user_input)
     return {"analysis": completion}

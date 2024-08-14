@@ -1,11 +1,15 @@
 import json
 from typing import List
 from sqlalchemy.orm import Session
+from langchain_core.output_parsers import JsonOutputParser
+from langchain.prompts import PromptTemplate
 
 from src.data.models import Focus
+from src.services.groq_service import groq_client, groq_chat
+from src.services.llm_output_types import LLMFocusOutput
 from src.services.prompt_service import AvailablePrompts, get_prompt
-from src.services.groq_service import groq_client
 from src.utils.ai_models import open_source_models
+from src.utils.hotdate import convert_due_date
 from src.utils.logger import logger
 from src.utils.generation_statistics import GenerationStatistics
 
@@ -92,3 +96,23 @@ def generate_user_context(
     except Exception as e:
         logger.error(f"generate_user_context_error {e}")
         return None
+
+def process_user_input(user_input: str) -> LLMFocusOutput:
+    # Create the LLM chain
+    parser = JsonOutputParser(pydantic_object=LLMFocusOutput)
+    prompt_template = PromptTemplate(
+        template= get_prompt(AvailablePrompts.v4),
+        input_variables=["user_input"],
+        partial_variables={"format_instructions": parser.get_format_instructions()}
+    )
+
+    # Get the LLM response
+    chain = prompt_template | groq_chat | parser
+    llm_response = chain.invoke({"user_input": user_input})
+
+    with_due_dates =[]
+    for item in llm_response['items']:
+        item['due_date'] = convert_due_date(item['due_date'])
+        with_due_dates.append(item)
+    
+    return with_due_dates
