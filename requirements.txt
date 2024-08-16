@@ -11,6 +11,7 @@ charset-normalizer==3.3.2
 click==8.1.7
 cryptography==43.0.0
 dataclasses-json==0.6.7
+debugpy==1.8.5
 deprecation==2.1.0
 distro==1.9.0
 dnspython==2.6.1

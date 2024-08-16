@@ -1,14 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.security import OAuth2PasswordBearer
 
 
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 from src.routers.ai_router import ai_router
+from src.routers.notes import notes_router
 from src.routers.graphql import graphql_router
+from src.utils.user import UserAuthMiddleware
 
 app = FastAPI()
 
@@ -26,8 +30,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 # Routers
+app.add_middleware(UserAuthMiddleware)
 app.include_router(ai_router)
 app.include_router(graphql_router, prefix="/graphql")
+app.include_router(notes_router, prefix="/notes")
 
 
 # Root
@@ -35,6 +41,24 @@ app.include_router(graphql_router, prefix="/graphql")
 async def root():
     return {"message": "Hello World"}
 
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="Custom title",
+        version="2.5.0",
+        summary="This is a very custom OpenAPI schema",
+        description="Here's a longer description of the custom **OpenAPI** schema",
+        routes=app.routes,
+    )
+    openapi_schema["info"]["x-logo"] = {
+        "url": "https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png"
+    }
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 if __name__ == "__main__":
     import uvicorn

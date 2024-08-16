@@ -17,6 +17,7 @@ RUN apk update && \
   libffi-dev \
   openssl-dev
 
+# Set container working directory
 WORKDIR /app
 
 # Copy requirements files
@@ -25,11 +26,14 @@ COPY requirements.txt ./
 # Install dependencies
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Copy the rest of the application
+# Copy the application
 COPY . .
 
-# Make port 8000 available to the world outside this container
+# Expose debugging port
+EXPOSE 5678
+
+# Expose application port
 EXPOSE 8000
 
-# Run the application with hot reloading using watchgod
-CMD ["uvicorn", "src.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+# Run the application with hot reloading
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

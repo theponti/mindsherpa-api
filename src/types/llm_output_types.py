@@ -55,7 +55,7 @@ class Item(BaseModel):
     category: Category
     priority: int = Field(ge=1, le=5)
     sentiment: Sentiment
-    due_date: DueDate
+    due_date: str
 
 class LLMFocusOutput(BaseModel):
     items: List[Item]

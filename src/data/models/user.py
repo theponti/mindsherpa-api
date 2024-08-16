@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from sqlalchemy import Column, DateTime, ForeignKey, String, UUID, func
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, mapped_column, Mapped
 
 from src.data.db import Base
 
@@ -8,17 +8,21 @@ from src.data.db import Base
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.uuid_generate_v4()
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=True), 
+        primary_key=True, 
+        server_default=func.uuid_generate_v4()
     )
-    # apple_id = Column(String, unique=True, nullable=False)
-    email = Column(String, unique=True, nullable=False)
-    name = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
+    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    profile = relationship("Profile", back_populates="user")
+    # refresh_tokens = relationship("RefreshToken", back_populates="user")
+    
     def __repr__(self):
         return f"<User(id={self.id}, name={self.name})>"
 
+# User.
 
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
@@ -31,7 +35,7 @@ class RefreshToken(Base):
     )
     token = Column(String, unique=True, nullable=False)
     revoked = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(UTC))
 
     def __repr__(self):
         return f"<RefreshToken(id={self.id}, user_id={self.user_id})>"
@@ -44,12 +48,16 @@ class Profile(Base):
     )
     full_name = Column(String, nullable=True)
     provider = Column(String, nullable=False)
+    
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    user = relationship("User", back_populates="profile")
+
+    created_at = Column(DateTime, default=datetime.now(UTC))
+    updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
     def __repr__(self):
         return f"<Profile(id={self.id}, full_name={self.full_name})>"
+
 
 
 Profile.actions = relationship("Action", back_populates="profile")

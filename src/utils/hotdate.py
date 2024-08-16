@@ -5,14 +5,13 @@ def convert_due_date(due_date: Dict[str, Union[str, int]]) -> str:
     """
     Convert the due_date dictionary to a datetime string.
     
-    Args:
-    due_date (Dict[str, Union[str, int]]): A dictionary containing 'month', 'day', 'year', and 'time' keys.
+    **Args:**
+    - due_date (Dict[str, Union[str, int]]): A dictionary containing 'month', 'day', 'year', and 'time' keys.
     
-    Returns:
-    str: A formatted datetime string or a description of the relative date.
+    **Returns:**
+    - str: A formatted datetime string or a description of the relative date.
     """
     current_date = datetime.datetime.now()
-    print(f"due_date: {due_date}")
     
     # Handle relative month values
     if isinstance(due_date['month'], int):
@@ -35,7 +34,7 @@ def convert_due_date(due_date: Dict[str, Union[str, int]]) -> str:
     # Handle relative day values
     if isinstance(due_date['day'], int):
         if due_date['day'] == 0:
-            return datetime.date(year, month, current_date.day)
+            return datetime.date(year, month, current_date.day).strftime('%Y-%m-%dT%H:%M:%SZ')
         else:
             day = max(due_date['day'], (current_date + datetime.timedelta(days=due_date["day"])).day)
     else:
@@ -46,7 +45,7 @@ def convert_due_date(due_date: Dict[str, Union[str, int]]) -> str:
             day = 0
 
 
-    return datetime.datetime(year, month, day)
+    return datetime.datetime(year, month, day).strftime('%Y-%m-%dT%H:%M:%SZ')
     
 
 def datetime_to_friendly(date: datetime.datetime) -> str:

@@ -81,6 +81,7 @@ async def upload_voice_note_v2(audio_file: Upload):
             # Create a temporary file with a .m4a extension (common for voice memos)
             temp_file_path = os.path.join(temp_dir, "temp_audio.m4a")
             
+            
             # Save the uploaded file
             with open(temp_file_path, "wb") as dst:
                 content = await audio_file.read()

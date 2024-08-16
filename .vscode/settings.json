@@ -9,5 +9,8 @@
     "uvicorn",
     "dotenv",
     "sessionmaker"
+  ],
+  "cSpell.words": [
+    "autoflush"
   ]
 }

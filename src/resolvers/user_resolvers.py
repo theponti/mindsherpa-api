@@ -3,7 +3,6 @@ from jwt.exceptions import InvalidTokenError
 from sqlalchemy.orm import Session
 from strawberry.types import Info
 import strawberry
-import uuid
 
 
 from src.data.models import User, Profile
@@ -21,31 +20,36 @@ from src.schemas.types import (
 )
 
 
-def get_current_user(session: Session, token: str) -> tuple[User, Profile]:
-    response = supabase_client.auth.get_user(token)
+def get_user_by_token(session: Session, token: str) -> tuple[User, Profile]:
+    try:
+        response = supabase_client.auth.get_user(token)
+        if response is None:
+            raise HTTPException(
+                status_code=403, detail="Invalid authentication credentials"
+            )
 
-    if response is None:
-        raise HTTPException(
-            status_code=403, detail="Invalid authentication credentials"
-        )
+        user_id = response.user.id
+        user = session.query(User).filter(User.id == user_id).first()
+        if not user:
+            user = User(
+                id=user_id,
+                email=response.user.email,
+            )
+            session.add(user)
+            session.commit()
 
-    user_id = response.user.id
-    user = session.query(User).filter(User.id == user_id).first()
-    if not user:
-        user = User(
-            id=user_id,
-            email=response.user.email,
-        )
-        session.add(user)
-        session.commit()
+        profile = session.query(Profile).filter(Profile.user_id == user_id).first()
+        if not profile:
+            profile = Profile(provider="apple", user_id=user.id)
+            session.add(profile)
+            session.commit()
 
-    profile = session.query(Profile).filter(Profile.user_id == user_id).first()
-    if not profile:
-        profile = Profile(id=uuid.uuid4(), provider="apple", user_id=user.id)
-        session.add(profile)
-        session.commit()
-
-    return User(id=response.user.id, email=response.user.email), profile
+        return user, profile
+    except IndexError:
+        raise HTTPException(status_code=401, detail="Invalid authorization header")
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
 
 
 async def save_apple_user(info: Info, id_token: str, nonce: str) -> AuthPayload:

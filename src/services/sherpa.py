@@ -7,7 +7,7 @@ from langchain.prompts import PromptTemplate
 from src.data.models import Focus
 from src.data.data_access import get_chat_history, get_user_notes
 from src.services.groq_service import groq_client, groq_chat
-from src.services.llm_output_types import LLMFocusOutput
+from src.types.llm_output_types import LLMFocusOutput
 from src.services.prompt_service import AvailablePrompts, get_prompt
 from src.utils.ai_models import open_source_models
 from src.utils.hotdate import convert_due_date
@@ -98,25 +98,44 @@ def generate_user_context(
         logger.error(f"generate_user_context_error {e}")
         return None
 
-def process_user_input(user_input: str) -> LLMFocusOutput:
-    # Create the LLM chain
-    parser = JsonOutputParser(pydantic_object=LLMFocusOutput)
-    prompt_template = PromptTemplate(
-        template= get_prompt(AvailablePrompts.v4),
-        input_variables=["user_input"],
-        partial_variables={"format_instructions": parser.get_format_instructions()}
-    )
+def process_user_input(user_input: str) -> LLMFocusOutput | None:
+    """
+    Process user input and return a list of focus items
 
-    # Get the LLM response
-    chain = prompt_template | groq_chat | parser
-    llm_response = chain.invoke({"user_input": user_input})
+    **Args:**
+    - user_input (str): User input
 
-    with_due_dates =[]
-    for item in llm_response['items']:
-        item['due_date'] = convert_due_date(item['due_date'])
-        with_due_dates.append(item)
-    
-    return with_due_dates
+    **Returns:**
+    - LLMFocusOutput: List of focus items
+    """
+    try:
+        # 👇 Create output parser
+        parser = JsonOutputParser(pydantic_object=LLMFocusOutput)
+
+        # 👇 Create prompt template
+        prompt_template = PromptTemplate(
+            template= get_prompt(AvailablePrompts.v4),
+            input_variables=["user_input"],
+            partial_variables={"format_instructions": parser.get_format_instructions()}
+        )
+
+        # 👇 Create the LLM chain
+        chain = prompt_template | groq_chat | parser
+
+        # 👇 Get the LLM response
+        llm_response = chain.invoke({"user_input": user_input})
+
+        # 👇 Convert due dates use `hotdate`
+        with_due_dates =[]
+        for item in llm_response['items']:
+            item['due_date'] = convert_due_date(item['due_date'])
+            with_due_dates.append(item)
+        
+        return LLMFocusOutput(items=with_due_dates)
+    except Exception as e:
+        logger.error(f"Error processing user input: {e}")
+        return None
+
 
 
 def get_sherpa_response(

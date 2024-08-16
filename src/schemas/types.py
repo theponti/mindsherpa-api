@@ -4,7 +4,7 @@ import strawberry
 
 @strawberry.type
 class AuthPayload:
-    user_id: int
+    user_id: str
     access_token: str
     refresh_token: str
 
