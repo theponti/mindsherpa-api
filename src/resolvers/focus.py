@@ -106,36 +106,49 @@ async def get_focus_items(info: strawberry.Info, filter: Optional[GetFocusFilter
 
         session: Session = info.context.get("session")
         profile_id = info.context.get("profile").id
-        
+
         if filter and filter.category:
-            stored_focus = session.query(Focus).filter_by(profile_id=profile_id, category=filter.category).all()
-        else:
-            stored_focus = session.query(Focus).filter_by(profile_id=profile_id).all()
-        if stored_focus:
-            return FocusOutput(items=[item.to_output_item() for item in stored_focus])
-
-        try:
-            transcript_base = """
-            ### User Context:
-            {user_context}
-
-            ### Chat History:
-            {chat_history}
-            """
-            profile_id = info.context.get("profile").id
-            history = get_user_context(info.context.get("session"), profile_id)
-            focus_items = generate_user_context(
-                profile_id=profile_id,
-                session=info.context.get("session"),
-                transcript=transcript_base.format(
-                    user_context=history.note_history, chat_history=history.chat_history
-                ),
+            focus_items = (
+                session
+                    .query(Focus)
+                    .filter_by(profile_id=profile_id, category=filter.category)
+                    .order_by(Focus.due_date.desc())
+                    .all()
             )
+        else:
+            focus_items = (
+                session
+                    .query(Focus)
+                    .filter_by(profile_id=profile_id)
+                    .order_by(Focus.due_date.desc())
+                    .all()
+            )
+        
+        return FocusOutput(items=[item.to_output_item() for item in focus_items])
 
-            if not focus_items:
-                return FocusOutput(items=[])
 
-            return FocusOutput(items=[item.to_output_item() for item in focus_items])
-        except Exception as e:
-            logger.error(f" ********* ERROR IN USER PROMPT ********: {e} ***** ")
-            raise Exception("Error retrieving user focus")
+async def generate_focus_from_context(profile_id: str, session: Session):
+    try:
+        transcript_base = """
+        ### User Context:
+        {user_context}
+
+        ### Chat History:
+        {chat_history}
+        """
+        history = get_user_context(session, profile_id)
+        focus_items = generate_user_context(
+            profile_id=profile_id,
+            session=session,
+            transcript=transcript_base.format(
+                user_context=history.note_history, chat_history=history.chat_history
+            ),
+        )
+
+        if not focus_items:
+            return FocusOutput(items=[])
+
+        return FocusOutput(items=[item.to_output_item() for item in focus_items])
+    except Exception as e:
+        logger.error(f" ********* ERROR IN USER PROMPT ********: {e} ***** ")
+        raise Exception("Error retrieving user focus")
