@@ -10,7 +10,5 @@
     "dotenv",
     "sessionmaker"
   ],
-  "cSpell.words": [
-    "autoflush"
-  ]
+  "cSpell.words": ["autoflush", "langchain"]
 }
