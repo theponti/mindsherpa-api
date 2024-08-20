@@ -1,15 +1,10 @@
+from typing import List
+
 from sqlalchemy.orm import Session
-from typing import Annotated, List, Required
 
 from src.data.models.focus import Focus
 from src.data.models.note import Note
 from src.services.sherpa import process_user_input
-
-def get_focus_by_profile_id(
-        session: Session,
-        profile_id: Annotated[str, Required]
-    ) -> List[Focus]:
-    return session.query(Focus).filter(Focus.profile_id == profile_id).all()
 
 def create_focus_from_text(text: str, profile_id: str, session: Session) -> List[Focus]:
     try:

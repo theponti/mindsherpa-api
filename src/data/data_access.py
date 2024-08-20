@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from sqlalchemy.orm import Session
+from uuid import UUID
 from typing import List
 
-from src.data.models import Message
-from src.data.notes import get_user_notes
+from sqlalchemy.orm import Session
 
+from src.data.models.chat import Message
+from src.data.notes import get_user_notes
 
 def get_full_chat_history(session: Session, profile_id: str) -> List[Message]:
     messages = session.query(Message).filter(Message.profile_id == profile_id).all()
@@ -17,7 +18,7 @@ def get_chat_history(session: Session, chat_id: str) -> List[Message]:
 
 
 def insert_message(
-    session: Session, chat_id: str, message: str, profile_id: str, role: str
+    session: Session, chat_id: str, message: str, profile_id: UUID, role: str
 ) -> Message:
     new_message = Message(
         message=message, chat_id=chat_id, profile_id=profile_id, role=role

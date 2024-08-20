@@ -3,10 +3,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 import strawberry
 
-from src.data.data_access import get_user_context
 from src.data.models.focus import Focus, FocusOutputItem
-from src.services.sherpa import generate_user_context
-from src.utils.logger import logger
 
 
 @strawberry.enum
@@ -125,30 +122,3 @@ async def get_focus_items(info: strawberry.Info, filter: Optional[GetFocusFilter
             )
         
         return FocusOutput(items=[item.to_output_item() for item in focus_items])
-
-
-async def generate_focus_from_context(profile_id: str, session: Session):
-    try:
-        transcript_base = """
-        ### User Context:
-        {user_context}
-
-        ### Chat History:
-        {chat_history}
-        """
-        history = get_user_context(session, profile_id)
-        focus_items = generate_user_context(
-            profile_id=profile_id,
-            session=session,
-            transcript=transcript_base.format(
-                user_context=history.note_history, chat_history=history.chat_history
-            ),
-        )
-
-        if not focus_items:
-            return FocusOutput(items=[])
-
-        return FocusOutput(items=[item.to_output_item() for item in focus_items])
-    except Exception as e:
-        logger.error(f" ********* ERROR IN USER PROMPT ********: {e} ***** ")
-        raise Exception("Error retrieving user focus")

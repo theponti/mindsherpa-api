@@ -1,12 +1,20 @@
 from datetime import date, UTC, datetime
-from pydantic import BaseModel, Field
-from sqlalchemy import UUID, Column, ForeignKey, Integer, String, Date
-from sqlalchemy.orm import mapped_column, Mapped
-import strawberry
+from enum import Enum
 from typing import Optional
 import uuid
 
+from pydantic import BaseModel, Field
+from sqlalchemy import UUID, Column, ForeignKey, Integer, String, Date
+from sqlalchemy.orm import mapped_column, Mapped, Session
+import strawberry
+
 from src.data.db import Base
+
+class FocusState(Enum):
+    backlog = "backlog"
+    active = "active"
+    completed = "completed"
+    deleted = "deleted"
 
 @strawberry.type
 class FocusOutputItem:
@@ -18,7 +26,7 @@ class FocusOutputItem:
     priority: int
     sentiment: str
     due_date: Optional[date]
-    
+
 class Focus(Base):
     __tablename__ = "focus"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -26,8 +34,7 @@ class Focus(Base):
     due_date: Mapped[date] = mapped_column(Date, nullable=True)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=4)
     sentiment: Mapped[str] = mapped_column(String, nullable=False, default="neutral")
-    state: Mapped[str] = mapped_column(String, nullable=False, default="backlog")
-    status: Mapped[str] = mapped_column(String, nullable=False, default="active")
+    state: Mapped[FocusState] = mapped_column(String, nullable=False, default="backlog")
     task_size: Mapped[str] = mapped_column(String, nullable=False, default="medium")
     text: Mapped[str] = mapped_column(nullable=False)
     type: Mapped[str] = mapped_column(nullable=False, default="task")
@@ -50,7 +57,7 @@ class Focus(Base):
             "sentiment": self.sentiment,
             "due_date": self.due_date,
         }
-    
+
     def to_output_item(self) -> FocusOutputItem:
         return FocusOutputItem(
             id=self.id,
@@ -77,3 +84,7 @@ class FocusType(BaseModel):
     profile_id: uuid.UUID
     created_at: date = Field(default_factory=datetime.now(UTC).date)
     updated_at: date = Field(default_factory=datetime.now(UTC).date)
+
+
+def get_focus_by_profile_id(session: Session, profile_id):
+    return session.query(Focus).filter(Focus.profile_id == profile_id).all()

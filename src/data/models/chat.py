@@ -1,8 +1,9 @@
 import enum
-from datetime import datetime
-from sqlalchemy import Column, DateTime, ForeignKey, String, UUID, func
+import datetime
+from sqlalchemy import DateTime, ForeignKey, String, UUID, func
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 import strawberry
+import uuid
 
 from src.data.db import Base
 from src.utils.logger import logger
@@ -20,15 +21,15 @@ class ChatState(enum.Enum):
 
 class Chat(Base):
     __tablename__ = "chats"
-    id = Column(
+    id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=func.uuid_generate_v4()
     )
-    title = Column(String, nullable=False)
-    profile_id: Mapped[UUID] = mapped_column(ForeignKey("profiles.id"))
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profiles.id"))
     state: Mapped[ChatState] = mapped_column(nullable=False, default="active")
 
     # Metadata
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.now(datetime.UTC))
 
     def to_json(self):
         return {
@@ -54,14 +55,14 @@ class Chat(Base):
 
 class Message(Base):
     __tablename__ = "messages"
-    id = Column(
+    id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=func.uuid_generate_v4()
     )
-    message = Column(String)
-    role = Column(String, nullable=False)
-    chat_id = Column(UUID(as_uuid=True), ForeignKey("chats.id"))
-    profile_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    message: Mapped[str] = mapped_column(String)
+    role: Mapped[str] = mapped_column(String, nullable=False)
+    chat_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("chats.id"))
+    profile_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("profiles.id"))
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.now(datetime.UTC))
 
     def __repr__(self):
         return f"<Message(id={self.id}, message={self.message})>"

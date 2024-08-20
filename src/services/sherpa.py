@@ -1,15 +1,15 @@
-import json
-from typing import List
+from typing import Annotated, List, Required
+import uuid
 from sqlalchemy.orm import Session
 from langchain_core.output_parsers import JsonOutputParser
 from langchain.prompts import PromptTemplate
 
-from src.data.models import Focus
 from src.data.data_access import get_chat_history, get_user_notes
-from src.services.groq_service import groq_client, groq_chat
+from src.data.models.chat import Message
+from src.data.models.focus import get_focus_by_profile_id
+from src.services.groq_service import groq_chat
 from src.types.llm_output_types import LLMFocusOutput
 from src.services.prompt_service import AvailablePrompts, get_prompt
-from src.utils.ai_models import open_source_models
 from src.utils.hotdate import convert_due_date
 from src.utils.logger import logger
 from src.utils.generation_statistics import GenerationStatistics
@@ -27,78 +27,7 @@ def log_usage(model: str, usage):
     logger.info("focus_stats", statistics_to_return.get_stats())
 
 
-def get_focus_items_from_text(text: str, model: str = "llama3-70b-8192") -> List[dict] | None:
-    system_prompt = get_prompt(AvailablePrompts.v3)
-
-    if model not in open_source_models:
-        logger.error(f" ********* Invalid model ********: {model} ***** ")
-        return None
-    
-    try:
-        completion = groq_client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": text},
-            ],
-            temperature=0.3,
-            max_tokens=8000,
-            top_p=1,
-            stream=False,
-            response_format={"type": "json_object"},
-            stop=None,
-        )
-
-        if completion.usage:
-            log_usage(model, completion.usage)
-    except Exception as e:
-        logger.error(f" ********* API error ********: {e} ***** ")
-        return None
-
-    try:
-        if not completion.choices[0].message.content:
-            return None
-        
-        formatted: dict = json.loads(completion.choices[0].message.content)
-        return formatted["items"]
-    except Exception as e:
-        logger.error(f" ********* SUMMARY GENERATION error ******* : {e} ")
-        return None
-
-def generate_user_context(
-    transcript: str,
-    session: Session,
-    profile_id: str,
-    model: str = "llama3-70b-8192",
-) -> List[Focus] | None:
-    focus_items = get_focus_items_from_text(transcript, model)
-    arr = focus_items if focus_items else []
-    
-    try:
-        created_items = [
-            Focus(
-                type=item["type"],
-                task_size=item["task_size"],
-                text=item["text"],
-                category=item["category"],
-                priority=item["priority"],
-                sentiment=item["sentiment"],
-                due_date=item["due_date"],
-                profile_id=profile_id,
-            )
-            for item in arr
-        ]
-        
-        # Save to database
-        session.bulk_save_objects(created_items)
-        session.commit()
-
-        return created_items
-    except Exception as e:
-        logger.error(f"generate_user_context_error {e}")
-        return None
-
-def process_user_input(user_input: str) -> LLMFocusOutput | None:
+def process_user_input(user_input: str) -> LLMFocusOutput:
     """
     Process user input and return a list of focus items
 
@@ -134,7 +63,7 @@ def process_user_input(user_input: str) -> LLMFocusOutput | None:
         return LLMFocusOutput(items=with_due_dates)
     except Exception as e:
         logger.error(f"Error processing user input: {e}")
-        return None
+        raise e
 
 
 
@@ -159,9 +88,25 @@ def get_sherpa_response(
     # Get the LLM response
     chain = prompt_template | groq_chat | parser
     llm_response = chain.invoke({
-        "user_contents": user_context_contents.join("\n"), 
-        "chat_history": chat_history_contents.join("\n"),
+        "user_contents": "\n".join(user_context_contents), 
+        "chat_history": "\n".join(chat_history_contents),
         "user_input": message
     })
     
     return llm_response
+
+def get_chat_summary(messages: List[Message], profile_id: Annotated[uuid.UUID, Required], session: Session) -> LLMFocusOutput | None:
+    existing_focus_items = get_focus_by_profile_id(profile_id=profile_id, session=session)
+    transcript = """
+    Analyze the chat transcript. Do not include any existing items in the focus list.
+
+    ### Existing Items
+    {existing_items}
+
+    ### Chat Transcript
+    {chat_history}
+    """.format(
+        existing_items="\n".join([f"{item.type.capitalize()}: {item.text}" for item in existing_focus_items]),
+        chat_history="\n".join([f"{message.role.capitalize()}: {message.message}" for message in messages])
+    )
+    return process_user_input(user_input=transcript)

@@ -1,14 +1,16 @@
-from typing import Annotated, List, Required
-import strawberry
+from typing import List
+import uuid
+
 from sqlalchemy.orm import Session
+import strawberry
+from strawberry.types import Info
 
 from src.data.models.chat import Chat, ChatOutput, ChatState, Message as MessageModel
-from src.data.models.focus import Focus
 from src.data.data_access import insert_message
 from src.schemas.types import Message
+from src.types.llm_output_types import LLMFocusOutput
 from src.utils.logger import logger
-from src.services.focus import get_focus_by_profile_id
-from src.services.sherpa import get_focus_items_from_text, get_sherpa_response
+from src.services.sherpa import get_sherpa_response, get_chat_summary
 
 def message_to_gql(message: MessageModel) -> Message:
     try:
@@ -61,36 +63,42 @@ class ChatMessagesResponse:
     messages: List[Message]
     summary: List[ChatSummaryOutputItem]
     
-async def chat_messages(info: strawberry.Info, chat_id: str) -> ChatMessagesResponse:
+async def chat_messages(info: Info, chat_id: str) -> ChatMessagesResponse | None:
     if not info.context.get("user"):
         raise Exception("Unauthorized")
 
-    session = info.context.get("session")
+    session: Session = info.context.get("session")
     profile_id = info.context.get("profile").id
     messages = session.query(MessageModel).filter(MessageModel.chat_id == chat_id).all()
     chat_summary = get_chat_summary(messages=messages, profile_id=profile_id, session=session)
+    if not chat_summary:
+        logger.error("Chat summary could not be generated.")
+        return None
     
-    logger.info("Chat summary", {"summary": chat_summary})
     return ChatMessagesResponse(
         messages=[message_to_gql(message) for message in messages],
-        summary=[ChatSummaryOutputItem(text=c["text"]) for c in chat_summary]
+        summary=[ChatSummaryOutputItem(text=c.text) for c in chat_summary.items]
     )
 
 
 
 async def send_chat_message(
-    info: strawberry.Info, chat_id: str, message: str
+    info: Info, chat_id: str, message: str
 ) -> List[Message]:
 
     if not info.context.get("user"):
         raise Exception("Unauthorized")
 
-    profile_id = info.context.get("profile").id
-    session = info.context.get("session")
+    profile_id: uuid.UUID = info.context.get("profile").id
+    session: Session = info.context.get("session")
 
     # Insert new message into the database
     user_message = insert_message(
-        session, chat_id=chat_id, profile_id=profile_id, message=message, role="user"
+        session, 
+        chat_id=chat_id, 
+        profile_id=profile_id, 
+        message=message, 
+        role="user"
     )
 
     # Retrieve message from ChatGPT
@@ -112,12 +120,12 @@ async def send_chat_message(
         system_message,
     ]
 
-async def end_chat(info: strawberry.Info, chat_id: str) -> dict:
+async def end_chat(info: Info, chat_id: str) -> LLMFocusOutput | None:
     if not info.context.get("user"):
         raise Exception("Unauthorized")
 
-    session = info.context.get("session")
-    chat: Chat = session.query(Chat).filter(Chat.id == chat_id).first()
+    session: Session = info.context.get("session")
+    chat = session.query(Chat).filter(Chat.id == chat_id).first()
 
     if chat is None:
         raise ValueError("Chat not found")
@@ -128,25 +136,10 @@ async def end_chat(info: strawberry.Info, chat_id: str) -> dict:
     chat_history: List[MessageModel] = session.query(MessageModel).filter(MessageModel.chat_id == chat_id).all()
     chat_summary = get_chat_summary(session=session, messages=chat_history, profile_id=chat.profile_id)
     if not chat_summary:
-        return { "error": "The chat could not have a summary generated." }
+        logger.error("Chat summary could not be generated.")
+        return None
     
     session.commit()
     return chat_summary
 
-
-def get_chat_summary(messages: List[MessageModel], profile_id: Annotated[str, Required], session: Session) -> List[Focus]:
-    existing_focus_items = get_focus_by_profile_id(profile_id=profile_id, session=session)
-    transcript = """
-    Analyze the chat transcript. Do not include any existing items in the focus list.
-
-    ### Existing Items
-    {existing_items}
-
-    ### Chat Transcript
-    {chat_history}
-    """.format(
-        existing_items="\n".join([f"{item.type.capitalize()}: {item.text}" for item in existing_focus_items]),
-        chat_history="\n".join([f"{message.role.capitalize()}: {message.message}" for message in messages])
-    )
-    return get_focus_items_from_text(text=transcript)
 
