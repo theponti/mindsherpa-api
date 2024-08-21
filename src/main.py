@@ -12,6 +12,7 @@ load_dotenv()
 from src.routers.ai_router import ai_router
 from src.routers.notes import notes_router
 from src.routers.graphql import graphql_router
+from src.routers.tasks import task_router
 from src.utils.user import UserAuthMiddleware
 
 app = FastAPI()
@@ -34,6 +35,7 @@ app.add_middleware(UserAuthMiddleware)
 app.include_router(ai_router)
 app.include_router(graphql_router, prefix="/graphql")
 app.include_router(notes_router, prefix="/notes")
+app.include_router(task_router, prefix="/tasks")
 
 
 # Root
