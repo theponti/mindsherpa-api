@@ -3,7 +3,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 import strawberry
 
-from src.data.models.focus import Focus, FocusOutputItem
+from src.data.models.focus import Focus, FocusOutputItem, FocusState
 
 
 @strawberry.enum
@@ -116,9 +116,12 @@ async def get_focus_items(info: strawberry.Info, filter: Optional[GetFocusFilter
             focus_items = (
                 session
                     .query(Focus)
-                    .filter_by(profile_id=profile_id)
+                    .filter(
+                        Focus.profile_id == profile_id,
+                        Focus.state.notin_([FocusState.completed.value])
+                    )
                     .order_by(Focus.due_date.desc())
                     .all()
             )
-        
+
         return FocusOutput(items=[item.to_output_item() for item in focus_items])
