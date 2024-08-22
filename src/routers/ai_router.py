@@ -1,22 +1,20 @@
 from fastapi import APIRouter, Form
 from fastapi.responses import StreamingResponse
 
-from src.utils.logger import logger
 from src.services.file_service import get_file_contents
-from src.services.sherpa import process_user_input
 from src.services.openai_service import openai_async_client
+from src.services.sherpa import process_user_input
+from src.types.llm_output_types import LLMFocusOutput
+from src.utils.logger import logger
 
 ai_router = APIRouter()
 
 
-@ai_router.post("/chat")
-async def chat(message: str = Form(...)):
-    response = await openai_async_client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": message}],
-        stream=False,
-    )
-    return {"text": response.choices[0].message.content}
+@ai_router.post("/chat", response_model=LLMFocusOutput)
+async def chat(message: str = Form(...)) -> LLMFocusOutput:
+    llm_response = process_user_input(message)
+
+    return llm_response
 
 
 @ai_router.post("/chat/stream")
@@ -40,6 +38,7 @@ async def stream_chat(message: str = Form(...)):
 def sherpa_focus_item(input: str = Form(...)):
     completion = process_user_input(input)
     return completion
+
 
 @ai_router.get("/test")
 def test():

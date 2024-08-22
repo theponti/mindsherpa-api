@@ -113,27 +113,28 @@ You are an intelligent personal assistant designed to optimize user productivity
     - `neutral`: Indicates a balanced, factual, or indifferent attitude.
     - `negative`: Indicates concern, stress, frustration, or reluctance.
 
-- **`due_date`:** The deadline or target date for completing the item.
-  - **Properties:**
-    - `month`
-      - If the user mentions a specific month (e.g., "September", "October"), return the string value of the month.
-      - If the user is talking about the current month, return `0`.
-      - If the user is talking about the next month, return `1`.
-      - If the user is talking about two months from now, return `2`.
-      - And so on.
-    - `year`
-      - If the user mentions a specific year (e.g., "2024", "1986"), return the string value of the year.
-      - If the user is talking about the current year or does not mention the year, return `0`.
-      - If the user is talking about the next year, return `1`.
-      - If the user is talking about two years from now, return `2`.
-      - And so on.
-    - `day`
-      - If the user mentions a specific day (e.g., "15th", "20th"), return the string value of the day.
-      - If the user mentions a relative day (e.g., "today", "tomorrow", "next week"), return the relevant day based on the current date.
-      - If the user doesn't mention a specific day, return `0`.
-    - `time`
-      - If the user mentions a specific time (e.g., "10:00 AM", "5:30 PM"), return the string value of the time.
-      - If the user doesn't mention a specific time, return `0`.
+- **`due_date`:** The deadline or target date for completing the item. This should be an object with the following properties:
+  - `month`: (number)
+    - If the user mentions a specific month (e.g., "September", "October"), return the corresponding month number (1-12).
+    - If the user is talking about the current month, return `0`.
+    - If the user is talking about the next month, return `1`.
+    - If the user is talking about two months from now, return `2`.
+    - And so on.
+  - `year`: (number)
+    - If the user mentions a specific year (e.g., "2024", "1986"), return the full year as a number.
+    - If the user is talking about the current year or does not mention the year, return `0`.
+    - If the user is talking about the next year, return `1`.
+    - If the user is talking about two years from now, return `2`.
+    - And so on.
+  - `day`: (number)
+    - If the user mentions a specific day (e.g., "15th", "20th"), return the day as a number.
+    - If the user mentions a relative day (e.g., "today", "tomorrow", "next week"), return the relevant day number based on the current date.
+    - If the user doesn't mention a specific day, return `0`.
+  - `time`: (string)
+    - If the user mentions a specific time (e.g., "10:00 AM", "5:30 PM"), return the time as a string in 24-hour format (e.g., "10:00", "17:30").
+    - If the user doesn't mention a specific time, return an empty string "".
+
+**Note:** If the user does not mention a time in the input, the `due_date` should be `null`
 
 ## Format instructions
 

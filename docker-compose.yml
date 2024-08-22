@@ -5,11 +5,18 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
+      - "5678:5678"
       - "8002:8000"
     volumes:
       - .:/app
       - /app/__pycache__/
     command: uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+    # command:
+    #   [
+    #     "sh",
+    #     "-c",
+    #     "python -m debugpy --wait-for-client --listen 0.0.0.0:5678 -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload -Xfrozen_modules=off",
+    #   ]
     depends_on:
       - postgres
 
@@ -25,7 +32,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5

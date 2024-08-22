@@ -1,18 +1,19 @@
-from typing import Annotated, List, Required
 import uuid
-from sqlalchemy.orm import Session
-from langchain_core.output_parsers import JsonOutputParser
+from typing import Annotated, List, Required
+
 from langchain.prompts import PromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
+from sqlalchemy.orm import Session
 
 from src.data.data_access import get_chat_history, get_user_notes
 from src.data.models.chat import Message
 from src.data.models.focus import get_focus_by_profile_id
 from src.services.groq_service import groq_chat
-from src.types.llm_output_types import LLMFocusOutput
 from src.services.prompt_service import AvailablePrompts, get_prompt
+from src.types.llm_output_types import LLMFocusOutput
+from src.utils.generation_statistics import GenerationStatistics
 from src.utils.hotdate import convert_due_date
 from src.utils.logger import logger
-from src.utils.generation_statistics import GenerationStatistics
 
 
 def log_usage(model: str, usage):
@@ -43,9 +44,9 @@ def process_user_input(user_input: str) -> LLMFocusOutput:
 
         # 👇 Create prompt template
         prompt_template = PromptTemplate(
-            template= get_prompt(AvailablePrompts.v4),
+            template=get_prompt(AvailablePrompts.v4),
             input_variables=["user_input"],
-            partial_variables={"format_instructions": parser.get_format_instructions()}
+            partial_variables={"format_instructions": parser.get_format_instructions()},
         )
 
         # 👇 Create the LLM chain
@@ -54,17 +55,23 @@ def process_user_input(user_input: str) -> LLMFocusOutput:
         # 👇 Get the LLM response
         llm_response = chain.invoke({"user_input": user_input})
 
+        print(llm_response["items"])
+
         # 👇 Convert due dates use `hotdate`
-        with_due_dates =[]
-        for item in llm_response['items']:
-            item['due_date'] = convert_due_date(item['due_date'])
+        with_due_dates = []
+        for item in llm_response["items"]:
+            if (
+                item["due_date"]
+                and item["due_date"] != "None"
+                and item["due_date"]["month"]
+            ):
+                item["due_date"] = convert_due_date(item["due_date"])
             with_due_dates.append(item)
-        
+
         return LLMFocusOutput(items=with_due_dates)
     except Exception as e:
         logger.error(f"Error processing user input: {e}")
         raise e
-
 
 
 def get_sherpa_response(
@@ -82,21 +89,30 @@ def get_sherpa_response(
     prompt_template = PromptTemplate(
         template=system_prompt,
         input_variables=["user_context", "chat_history"],
-        partial_variables={"format_instructions": parser.get_format_instructions()}
+        partial_variables={"format_instructions": parser.get_format_instructions()},
     )
 
     # Get the LLM response
     chain = prompt_template | groq_chat | parser
-    llm_response = chain.invoke({
-        "user_contents": "\n".join(user_context_contents), 
-        "chat_history": "\n".join(chat_history_contents),
-        "user_input": message
-    })
-    
+    llm_response = chain.invoke(
+        {
+            "user_contents": "\n".join(user_context_contents),
+            "chat_history": "\n".join(chat_history_contents),
+            "user_input": message,
+        }
+    )
+
     return llm_response
 
-def get_chat_summary(messages: List[Message], profile_id: Annotated[uuid.UUID, Required], session: Session) -> LLMFocusOutput | None:
-    existing_focus_items = get_focus_by_profile_id(profile_id=profile_id, session=session)
+
+def get_chat_summary(
+    messages: List[Message],
+    profile_id: Annotated[uuid.UUID, Required],
+    session: Session,
+) -> LLMFocusOutput | None:
+    existing_focus_items = get_focus_by_profile_id(
+        profile_id=profile_id, session=session
+    )
     transcript = """
     Analyze the chat transcript. Do not include any existing items in the focus list.
 
@@ -106,7 +122,11 @@ def get_chat_summary(messages: List[Message], profile_id: Annotated[uuid.UUID, R
     ### Chat Transcript
     {chat_history}
     """.format(
-        existing_items="\n".join([f"{item.type.capitalize()}: {item.text}" for item in existing_focus_items]),
-        chat_history="\n".join([f"{message.role.capitalize()}: {message.message}" for message in messages])
+        existing_items="\n".join(
+            [f"{item.type.capitalize()}: {item.text}" for item in existing_focus_items]
+        ),
+        chat_history="\n".join(
+            [f"{message.role.capitalize()}: {message.message}" for message in messages]
+        ),
     )
     return process_user_input(user_input=transcript)

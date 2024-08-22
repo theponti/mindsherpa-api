@@ -1,21 +1,23 @@
-FROM python:3.11-alpine as base
+FROM python:3.11-slim-bullseye as base
 
 ARG DEV=false
+ENV PYDEVD_DISABLE_FILE_VALIDATION=1
 ENV PYTHONUNBUFFERED=1 \
   PYTHONDONTWRITEBYTECODE=1 \
   PIP_NO_CACHE_DIR=off \
   PIP_DISABLE_PIP_VERSION_CHECK=on \
   PIP_DEFAULT_TIMEOUT=100
 
-# Install system dependencies
-RUN apk update && \
-  apk add --no-cache \
-  libpq \
-  gcc \
-  musl-dev \
-  python3-dev \
-  libffi-dev \
-  openssl-dev
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    g++ \
+    curl \
+    # Required for scientific and mathematical libraries, such as numpy and pandas
+    gfortran \
+    libopenblas-dev \
+    openssl \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set container working directory
 WORKDIR /app
@@ -23,8 +25,12 @@ WORKDIR /app
 # Copy requirements files
 COPY requirements.txt ./
 
+# Install `uv`
+ADD --chmod=755 https://astral.sh/uv/install.sh /install.sh
+RUN /install.sh && rm /install.sh
+
 # Install dependencies
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN /root/.cargo/bin/uv pip install --system --no-cache -r requirements.txt
 
 # Copy the application
 COPY . .

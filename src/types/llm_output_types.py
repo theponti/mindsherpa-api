@@ -1,6 +1,8 @@
-from pydantic import BaseModel, Field
-from typing import List, Union
 from enum import Enum
+from typing import List, Optional, Union
+
+from pydantic import BaseModel, Field
+
 
 class ItemType(str, Enum):
     event = "event"
@@ -10,12 +12,15 @@ class ItemType(str, Enum):
     note = "note"
     feeling = "feeling"
     request = "request"
+    question = "question"
+
 
 class TaskSize(str, Enum):
     small = "small"
     medium = "medium"
     large = "large"
     epic = "epic"
+
 
 class Category(str, Enum):
     career = "career"
@@ -37,16 +42,19 @@ class Category(str, Enum):
     events = "events"
     projects = "projects"
 
+
 class Sentiment(str, Enum):
     positive = "positive"
     neutral = "neutral"
     negative = "negative"
+
 
 class DueDate(BaseModel):
     month: Union[str, int]
     day: Union[str, int]
     year: Union[str, int]
     time: Union[str, int]
+
 
 class Item(BaseModel):
     type: ItemType
@@ -55,7 +63,8 @@ class Item(BaseModel):
     category: Category
     priority: int = Field(ge=1, le=5)
     sentiment: Sentiment
-    due_date: str
+    due_date: Optional[DueDate]
+
 
 class LLMFocusOutput(BaseModel):
     items: List[Item]
