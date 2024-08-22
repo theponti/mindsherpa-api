@@ -60,11 +60,7 @@ def process_user_input(user_input: str) -> LLMFocusOutput:
         # 👇 Convert due dates use `hotdate`
         with_due_dates = []
         for item in llm_response["items"]:
-            if (
-                item["due_date"]
-                and item["due_date"] != "None"
-                and item["due_date"]["month"]
-            ):
+            if item["due_date"] and item["due_date"] != "None":
                 item["due_date"] = convert_due_date(item["due_date"])
             with_due_dates.append(item)
 
