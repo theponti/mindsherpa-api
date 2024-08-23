@@ -56,15 +56,15 @@ class DueDate(BaseModel):
     time: Union[str, int]
 
 
-class Item(BaseModel):
+class LLMFocusItem(BaseModel):
     type: ItemType
     task_size: TaskSize
     text: str
     category: Category
     priority: int = Field(ge=1, le=5)
     sentiment: Sentiment
-    due_date: str
+    due_date: Optional[str]
 
 
 class LLMFocusOutput(BaseModel):
-    items: List[Item]
+    items: List[LLMFocusItem]

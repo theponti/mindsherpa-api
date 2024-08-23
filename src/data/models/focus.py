@@ -1,15 +1,26 @@
-from datetime import date, UTC, datetime
+import uuid
+from datetime import UTC, date, datetime
 from enum import Enum
 from typing import Optional
-import uuid
 
-from pydantic import BaseModel, Field
-import pydantic
-from sqlalchemy import UUID, Column, ForeignKey, Integer, String, Date
-from sqlalchemy.orm import mapped_column, Mapped, Session
 import strawberry
+from pydantic import BaseModel
+from sqlalchemy import UUID, Column, Date, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from src.data.db import Base
+
+
+class FocusItem(BaseModel):
+    id: int
+    text: str
+    type: str
+    task_size: str
+    category: str
+    priority: int
+    sentiment: str
+    due_date: Optional[date]
+
 
 @strawberry.enum
 class FocusState(Enum):
@@ -17,6 +28,7 @@ class FocusState(Enum):
     active = "active"
     completed = "completed"
     deleted = "deleted"
+
 
 @strawberry.type
 class FocusOutputItem:
@@ -41,7 +53,9 @@ class Focus(Base):
     due_date: Mapped[date] = mapped_column(Date, nullable=True)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=4)
     sentiment: Mapped[str] = mapped_column(String, nullable=False, default="neutral")
-    state: Mapped[str] = mapped_column(String, nullable=False, default=FocusState.backlog.value)
+    state: Mapped[str] = mapped_column(
+        String, nullable=False, default=FocusState.backlog.value
+    )
     task_size: Mapped[str] = mapped_column(String, nullable=False, default="medium")
     text: Mapped[str] = mapped_column(nullable=False)
     type: Mapped[str] = mapped_column(nullable=False, default="task")
@@ -50,8 +64,12 @@ class Focus(Base):
     profile_id = Column(UUID, ForeignKey("profiles.id"), nullable=False)
 
     # Metadata
-    created_at: Mapped[datetime] = mapped_column(Date, nullable=False, default=datetime.now(UTC))
-    updated_at: Mapped[datetime] = mapped_column(Date, nullable=False, default=datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(
+        Date, nullable=False, default=datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        Date, nullable=False, default=datetime.now(UTC)
+    )
 
     def to_json(self):
         return {
@@ -71,17 +89,16 @@ class Focus(Base):
 
     def to_output_item(self) -> FocusOutputItem:
         json = self.to_json()
-        return FocusOutputItem(**{
-            key: json[key]
-            for key in json
-        })
+        return FocusOutputItem(**{key: json[key] for key in json})
 
 
 def get_focus_by_profile_id(session: Session, profile_id):
     return session.query(Focus).filter(Focus.profile_id == profile_id).all()
 
+
 def get_focus_by_id(session: Session, focus_id: int) -> Focus:
     return session.query(Focus).filter(Focus.id == focus_id).first()
+
 
 def create_focus(session: Session, text: str, profile_id: uuid.UUID) -> Focus:
     focus = Focus(text=text, profile_id=profile_id)
@@ -89,6 +106,7 @@ def create_focus(session: Session, text: str, profile_id: uuid.UUID) -> Focus:
     session.commit()
     session.flush()
     return focus
+
 
 def complete_focus(session: Session, focus_id: int) -> Focus:
     focus = get_focus_by_id(session, focus_id)

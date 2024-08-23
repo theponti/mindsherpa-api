@@ -55,8 +55,6 @@ def process_user_input(user_input: str) -> LLMFocusOutput:
         # 👇 Get the LLM response
         llm_response = chain.invoke({"user_input": user_input})
 
-        print(llm_response["items"])
-
         # 👇 Convert due dates use `hotdate`
         with_due_dates = []
         for item in llm_response["items"]:
