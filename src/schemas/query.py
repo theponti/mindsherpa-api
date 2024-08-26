@@ -1,14 +1,17 @@
 from typing import List
+
 import strawberry
 
-
 from src.data.notes import get_user_notes
-from src.data.models.chat import ChatOutput
-from src.resolvers.chat_resolvers import chats, chat_messages, ChatMessagesResponse
+from src.resolvers.chat_resolvers import (
+    ChatMessagesResponse,
+    ChatOutput,
+    chat_messages,
+    chats,
+)
 from src.resolvers.focus import FocusOutput, get_focus_items
 from src.resolvers.user_resolvers import GetProfileOutput, get_profile
 from src.schemas.types import NoteOutput, User
-
 
 
 @strawberry.type
@@ -16,7 +19,7 @@ class Query:
     chats: List[ChatOutput] = strawberry.field(resolver=chats)
     chat_messages: ChatMessagesResponse = strawberry.field(resolver=chat_messages)
     profile: GetProfileOutput = strawberry.field(resolver=get_profile)
-    
+
     # Focus Items
     focus: FocusOutput = strawberry.field(resolver=get_focus_items)
 

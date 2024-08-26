@@ -11,23 +11,27 @@ from sqlalchemy.orm import Mapped, Session, mapped_column
 from src.data.db import Base
 
 
-class FocusItem(BaseModel):
-    id: int
-    text: str
-    type: str
-    task_size: str
-    category: str
-    priority: int
-    sentiment: str
-    due_date: Optional[date]
-
-
 @strawberry.enum
 class FocusState(Enum):
     backlog = "backlog"
     active = "active"
     completed = "completed"
     deleted = "deleted"
+
+
+class FocusItem(BaseModel):
+    id: int
+    category: str
+    due_date: Optional[date]
+    priority: int
+    profile_id: uuid.UUID
+    sentiment: str
+    state: FocusState
+    task_size: str
+    text: str
+    type: str
+    created_at: datetime
+    updated_at: datetime
 
 
 @strawberry.type

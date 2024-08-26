@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.params import Form
 from pydantic import BaseModel
 
-from src.data.models.focus import Focus, FocusItem
+from src.data.models.focus import FocusItem
 from src.services.focus import create_focus_items, create_note
 from src.services.openai_service import openai_client
 from src.services.sherpa import process_user_input

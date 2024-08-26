@@ -3,7 +3,9 @@ from typing import Annotated, List, Required
 
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from typing_extensions import Any
 
 from src.data.data_access import get_chat_history, get_user_notes
 from src.data.models.chat import Message
@@ -68,35 +70,47 @@ def process_user_input(user_input: str) -> LLMFocusOutput:
         raise e
 
 
+class SherpaResponse(BaseModel):
+    message: str
+    metadata: Any
+
+
 def get_sherpa_response(
     session: Session, message: str, chat_id, profile_id
-) -> str | None:
-    system_prompt = get_prompt(AvailablePrompts.SherpaChatResponse)
+) -> SherpaResponse | None:
+    try:
+        system_prompt = get_prompt(AvailablePrompts.SherpaChatResponse)
 
-    chat_history = get_chat_history(session, chat_id)
-    user_context = get_user_notes(session, profile_id)
-    chat_history_contents = [message.message for message in chat_history]
-    user_context_contents = [note.content for note in user_context]
+        chat_history = get_chat_history(session, chat_id)
+        user_context = get_user_notes(session, profile_id)
+        chat_history_contents = [message.message for message in chat_history]
+        user_context_contents = [note.content for note in user_context]
 
-    # Create the LLM chain
-    parser = JsonOutputParser(pydantic_object=LLMFocusOutput)
-    prompt_template = PromptTemplate(
-        template=system_prompt,
-        input_variables=["user_context", "chat_history"],
-        partial_variables={"format_instructions": parser.get_format_instructions()},
-    )
+        # Create the LLM chain
+        parser = JsonOutputParser(pydantic_object=SherpaResponse)
+        prompt_template = PromptTemplate(
+            template=system_prompt,
+            input_variables=["user_context", "chat_history"],
+            partial_variables={"format_instructions": parser.get_format_instructions()},
+        )
 
-    # Get the LLM response
-    chain = prompt_template | groq_chat | parser
-    llm_response = chain.invoke(
-        {
-            "user_contents": "\n".join(user_context_contents),
-            "chat_history": "\n".join(chat_history_contents),
-            "user_input": message,
-        }
-    )
+        # Get the LLM response
+        chain = prompt_template | groq_chat | parser
+        llm_response = chain.invoke(
+            {
+                "user_context": "\n".join(user_context_contents),
+                "chat_history": "\n".join(chat_history_contents),
+                "user_input": message,
+            }
+        )
 
-    return llm_response
+        print(llm_response["metadata"])
+        return SherpaResponse(
+            message=llm_response["message"], metadata=llm_response["metadata"]
+        )
+    except Exception as e:
+        logger.error(f"Generating sherpa response: {e}")
+        raise e
 
 
 def get_chat_summary(

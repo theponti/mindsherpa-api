@@ -1,4 +1,3 @@
-import enum
 import strawberry
 
 
@@ -9,27 +8,11 @@ class AuthPayload:
     refresh_token: str
 
 
-@strawberry.enum
-class MessageRole(enum.Enum):
-    USER = "user"
-    ASSISTANT = "assistant"
-
-
 @strawberry.type
 class Profile:
     id: int
     full_name: str | None
     user_id: str
-
-
-@strawberry.type
-class Message:
-    id: str
-    message: str
-    role: MessageRole
-    chat_id: str
-    profile_id: str
-    created_at: str
 
 
 @strawberry.type
