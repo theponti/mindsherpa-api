@@ -55,4 +55,5 @@ class UserAuthMiddleware(BaseHTTPMiddleware):
                 content={"detail": str(e)},
             )
         finally:
+            session.commit()
             session.close()

@@ -25,8 +25,8 @@ def create_focus_items(
             )
             for item in focus_items
         ]
-        session.bulk_save_objects(created_items, return_defaults=True)
-        session.commit()
+        session.add_all(created_items)
+        session.flush()
         return created_items
     except Exception as e:
         print(f"Error creating focus items: {e}")

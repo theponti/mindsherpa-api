@@ -2,11 +2,10 @@ import base64
 import datetime
 import os
 import tempfile
-from typing import Any, List, Optional
+from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.params import Form
 from pydantic import BaseModel
 
 from src.data.models.focus import FocusItem
@@ -125,20 +124,5 @@ async def create_focus_item_route(
         profile_id=request.state.profile.id,
         session=request.state.session,
     )
-    return (
-        [
-            FocusItem(
-                id=item.id,
-                category=item.category,
-                type=item.type,
-                due_date=item.due_date,
-                priority=item.priority,
-                sentiment=item.sentiment,
-                task_size=item.task_size,
-                text=item.text,
-            )
-            for item in created_items
-        ]
-        if created_items
-        else False
-    )
+
+    return [FocusItem(**item.to_json()) for item in created_items]
