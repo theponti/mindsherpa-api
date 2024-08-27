@@ -117,7 +117,7 @@ class CreateFocusItemInput(BaseModel):
 
 @notes_router.post("/focus")
 async def create_focus_item_route(
-    request: Request, input: CreateFocusItemInput
+    input: CreateFocusItemInput, request: Request
 ) -> List[FocusItem] | bool:
     created_items = create_focus_items(
         focus_items=input.items,
@@ -125,4 +125,20 @@ async def create_focus_item_route(
         session=request.state.session,
     )
 
-    return [FocusItem(**item.to_json()) for item in created_items]
+    return [
+        FocusItem(
+            id=item.id,
+            text=item.text,
+            type=item.type,
+            task_size=item.task_size,
+            category=item.category,
+            priority=item.priority,
+            profile_id=item.profile_id,
+            sentiment=item.sentiment,
+            state=item.state,
+            due_date=item.due_date,
+            created_at=item.created_at,
+            updated_at=item.updated_at,
+        )
+        for item in created_items
+    ]

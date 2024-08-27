@@ -5,8 +5,9 @@ from typing import Optional
 
 import strawberry
 from pydantic import BaseModel
-from sqlalchemy import UUID, Column, Date, ForeignKey, Integer, String
+from sqlalchemy import UUID, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.types import DateTime
 
 from src.data.db import Base
 
@@ -54,10 +55,10 @@ class Focus(Base):
     __tablename__ = "focus"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     category: Mapped[str] = mapped_column(String, nullable=False, default="general")
-    due_date: Mapped[date] = mapped_column(Date, nullable=True)
+    due_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=4)
     sentiment: Mapped[str] = mapped_column(String, nullable=False, default="neutral")
-    state: Mapped[str] = mapped_column(
+    state: Mapped[FocusState] = mapped_column(
         String, nullable=False, default=FocusState.backlog.value
     )
     task_size: Mapped[str] = mapped_column(String, nullable=False, default="medium")
@@ -65,14 +66,16 @@ class Focus(Base):
     type: Mapped[str] = mapped_column(nullable=False, default="task")
 
     # Relationships
-    profile_id = Column(UUID, ForeignKey("profiles.id"), nullable=False)
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        UUID, ForeignKey("profiles.id"), nullable=False
+    )
 
     # Metadata
     created_at: Mapped[datetime] = mapped_column(
-        Date, nullable=False, default=datetime.now(UTC)
+        DateTime, nullable=False, default=datetime.now(UTC)
     )
     updated_at: Mapped[datetime] = mapped_column(
-        Date, nullable=False, default=datetime.now(UTC)
+        DateTime, nullable=False, default=datetime.now(UTC)
     )
 
     def to_json(self):
@@ -92,11 +95,23 @@ class Focus(Base):
         }
 
     def to_output_item(self) -> FocusOutputItem:
-        json = self.to_json()
-        return FocusOutputItem(**{key: json[key] for key in json})
+        return FocusOutputItem(
+            id=self.id,
+            text=self.text,
+            type=self.type,
+            task_size=self.task_size,
+            category=self.category,
+            priority=self.priority,
+            profile_id=self.profile_id,
+            sentiment=self.sentiment,
+            state=self.state,
+            due_date=self.due_date,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )
 
 
-def get_focus_by_profile_id(session: Session, profile_id):
+def get_focus_by_profile_id(session: Session, profile_id: uuid.UUID):
     return session.query(Focus).filter(Focus.profile_id == profile_id).all()
 
 

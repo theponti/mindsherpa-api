@@ -76,13 +76,13 @@ class SherpaResponse(BaseModel):
 
 
 def get_sherpa_response(
-    session: Session, message: str, chat_id, profile_id
+    session: Session, message: str, chat_id: uuid.UUID, profile_id: uuid.UUID
 ) -> SherpaResponse | None:
     try:
         system_prompt = get_prompt(AvailablePrompts.SherpaChatResponse)
 
-        chat_history = get_chat_history(session, chat_id)
-        user_context = get_user_notes(session, profile_id)
+        chat_history = get_chat_history(session, chat_id=chat_id)
+        user_context = get_user_notes(session, profile_id=profile_id)
         chat_history_contents = [message.message for message in chat_history]
         user_context_contents = [note.content for note in user_context]
 
