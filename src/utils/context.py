@@ -3,11 +3,12 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from conf import ADMIN_TOKEN, ENV
+
 from src.data.db import SessionLocal
 from src.resolvers.user_resolvers import get_user_by_token
 
 
-class UserAuthMiddleware(BaseHTTPMiddleware):
+class ContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
         session = SessionLocal()
         params = request.query_params

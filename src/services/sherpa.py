@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated, List, Required
+from typing import Annotated, Required
 
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing_extensions import Any
 
-from src.data.data_access import get_chat_history, get_user_notes
+from src.data.context import get_user_context
 from src.data.models.chat import Message
 from src.data.models.focus import get_focus_by_profile_id
 from src.services.groq_service import groq_chat
@@ -80,11 +80,7 @@ def get_sherpa_response(
 ) -> SherpaResponse | None:
     try:
         system_prompt = get_prompt(AvailablePrompts.SherpaChatResponse)
-
-        chat_history = get_chat_history(session, chat_id=chat_id)
-        user_context = get_user_notes(session, profile_id=profile_id)
-        chat_history_contents = [message.message for message in chat_history]
-        user_context_contents = [note.content for note in user_context]
+        user_context = get_user_context(session, profile_id=profile_id)
 
         # Create the LLM chain
         parser = JsonOutputParser(pydantic_object=SherpaResponse)
@@ -98,29 +94,27 @@ def get_sherpa_response(
         chain = prompt_template | groq_chat | parser
         llm_response = chain.invoke(
             {
-                "user_context": "\n".join(user_context_contents),
-                "chat_history": "\n".join(chat_history_contents),
+                "chat_history": "\n".join(user_context.chat_history),
+                "user_context": "\n".join(user_context.note_history),
                 "user_input": message,
             }
         )
 
+        print(llm_response["message"])
         print(llm_response["metadata"])
-        return SherpaResponse(
-            message=llm_response["message"], metadata=llm_response["metadata"]
-        )
+        return SherpaResponse(message=llm_response["message"], metadata=llm_response["metadata"])
     except Exception as e:
         logger.error(f"Generating sherpa response: {e}")
         raise e
 
 
 def get_chat_summary(
-    messages: List[Message],
+    chat_id: Annotated[uuid.UUID, Required],
     profile_id: Annotated[uuid.UUID, Required],
-    session: Session,
+    session: Annotated[Session, Required],
 ) -> LLMFocusOutput | None:
-    existing_focus_items = get_focus_by_profile_id(
-        profile_id=profile_id, session=session
-    )
+    messages = session.query(Message).filter(Message.chat_id == chat_id).all()
+    existing_focus_items = get_focus_by_profile_id(profile_id=profile_id, session=session)
     transcript = """
     Analyze the chat transcript. Do not include any existing items in the focus list.
 
@@ -130,11 +124,7 @@ def get_chat_summary(
     ### Chat Transcript
     {chat_history}
     """.format(
-        existing_items="\n".join(
-            [f"{item.type.capitalize()}: {item.text}" for item in existing_focus_items]
-        ),
-        chat_history="\n".join(
-            [f"{message.role.capitalize()}: {message.message}" for message in messages]
-        ),
+        existing_items="\n".join([f"{item.type.capitalize()}: {item.text}" for item in existing_focus_items]),
+        chat_history="\n".join([f"{message.role.capitalize()}: {message.message}" for message in messages]),
     )
     return process_user_input(user_input=transcript)

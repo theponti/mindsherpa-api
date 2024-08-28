@@ -1,24 +1,26 @@
 import enum
 import uuid
+from datetime import datetime
 from typing import List
 
 import strawberry
 from sqlalchemy.orm import Session
 from strawberry.types import Info
 
-from src.data.data_access import insert_message
-from src.data.models.chat import Chat, ChatState
-from src.data.models.chat import Message as MessageModel
-from src.services.sherpa import get_chat_summary, get_sherpa_response
-from src.types.llm_output_types import LLMFocusOutput
+from src.data.chat import insert_message
+from src.data.models.chat import (
+    Chat,
+    Message as MessageModel,
+)
+from src.services.sherpa import get_sherpa_response
 from src.utils.logger import logger
 
 
 @strawberry.type
 class ChatOutput:
-    id: str
+    id: uuid.UUID
     title: str
-    created_at: str
+    created_at: datetime
 
 
 @strawberry.enum
@@ -29,23 +31,18 @@ class MessageRole(enum.Enum):
 
 @strawberry.type
 class MessageOutput:
-    id: str
+    id: uuid.UUID
     message: str
-    role: MessageRole
-    chat_id: str
-    profile_id: str
-    created_at: str
+    role: str
+    chat_id: uuid.UUID
+    profile_id: uuid.UUID
+    created_at: datetime
 
 
 def chat_to_gql(chats: List[Chat]) -> List[ChatOutput]:
     try:
         return [
-            ChatOutput(
-                **{
-                    field: getattr(chat, field)
-                    for field in ["id", "title", "created_at"]
-                }
-            )
+            ChatOutput(**{field: getattr(chat, field) for field in ["id", "title", "created_at"]})
             for chat in chats
         ]
     except AttributeError as e:
@@ -56,10 +53,7 @@ def chat_to_gql(chats: List[Chat]) -> List[ChatOutput]:
 def message_to_gql(message: MessageModel) -> MessageOutput:
     try:
         return MessageOutput(
-            **{
-                field: getattr(message, field)
-                for field in MessageOutput.__dataclass_fields__
-            }
+            **{field: getattr(message, field) for field in MessageOutput.__dataclass_fields__}
         )
     except AttributeError as e:
         logger.error(f"Error converting MessageModel to Message: {e}")
@@ -89,30 +83,8 @@ async def chats(info: strawberry.Info) -> List[ChatOutput]:
 
 
 @strawberry.type
-class ChatSummaryOutputItem:
-    text: str
-
-
-@strawberry.type
 class ChatMessagesResponse:
     messages: List[MessageOutput]
-
-
-async def chat_summary(info: Info, chat_id: str) -> List[ChatSummaryOutputItem] | None:
-    if not info.context.get("user"):
-        raise Exception("Unauthorized")
-
-    session: Session = info.context.get("session")
-    profile_id = info.context.get("profile").id
-    messages = session.query(MessageModel).filter(MessageModel.chat_id == chat_id).all()
-    chat_summary = get_chat_summary(
-        messages=messages, profile_id=profile_id, session=session
-    )
-    if not chat_summary:
-        logger.error("Chat summary could not be generated.")
-        return None
-
-    return [ChatSummaryOutputItem(text=c.text) for c in chat_summary.items]
 
 
 async def chat_messages(info: Info, chat_id: str) -> ChatMessagesResponse:
@@ -128,9 +100,7 @@ async def chat_messages(info: Info, chat_id: str) -> ChatMessagesResponse:
     )
 
 
-async def send_chat_message(
-    info: Info, chat_id: str, message: str
-) -> List[MessageOutput]:
+async def send_chat_message(info: Info, chat_id: uuid.UUID, message: str) -> List[MessageOutput]:
     if not info.context.get("user"):
         raise Exception("Unauthorized")
 
@@ -160,30 +130,3 @@ async def send_chat_message(
         user_message,
         system_message,
     ]
-
-
-async def end_chat(info: Info, chat_id: str) -> LLMFocusOutput | None:
-    if not info.context.get("user"):
-        raise Exception("Unauthorized")
-
-    session: Session = info.context.get("session")
-    chat = session.query(Chat).filter(Chat.id == chat_id).first()
-
-    if chat is None:
-        raise ValueError("Chat not found")
-
-    chat.state = ChatState.ENDED
-    session.add(chat)
-
-    chat_history: List[MessageModel] = (
-        session.query(MessageModel).filter(MessageModel.chat_id == chat_id).all()
-    )
-    chat_summary = get_chat_summary(
-        session=session, messages=chat_history, profile_id=chat.profile_id
-    )
-    if not chat_summary:
-        logger.error("Chat summary could not be generated.")
-        return None
-
-    session.commit()
-    return chat_summary

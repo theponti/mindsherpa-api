@@ -6,7 +6,6 @@ from sqlalchemy import UUID, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.data.db import Base
-from src.utils.logger import logger
 
 
 class ChatState(enum.Enum):
@@ -22,9 +21,7 @@ class Chat(Base):
     )
     title: Mapped[str] = mapped_column(String, nullable=False)
     profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profiles.id"))
-    state: Mapped[ChatState] = mapped_column(
-        String, nullable=False, default=ChatState.ACTIVE.value
-    )
+    state: Mapped[ChatState] = mapped_column(String, nullable=False, default=ChatState.ACTIVE.value)
 
     # Metadata
     created_at: Mapped[datetime.datetime] = mapped_column(
@@ -51,12 +48,8 @@ class Message(Base):
     )
     message: Mapped[str] = mapped_column(String)
     role: Mapped[str] = mapped_column(String, nullable=False)
-    chat_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("chats.id")
-    )
-    profile_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("profiles.id")
-    )
+    chat_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("chats.id"))
+    profile_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("profiles.id"))
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.now(datetime.UTC)
     )
