@@ -44,10 +44,10 @@ def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
     openapi_schema = get_openapi(
-        title="Custom title",
-        version="2.5.0",
-        summary="This is a very custom OpenAPI schema",
-        description="Here's a longer description of the custom **OpenAPI** schema",
+        title="Mindsherpa API",
+        version="0.0.1",
+        summary="Mindsherpa API",
+        description="Mindsherpa API",
         routes=app.routes,
     )
     openapi_schema["info"]["x-logo"] = {"url": "https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png"}
@@ -56,8 +56,3 @@ def custom_openapi():
 
 
 app.openapi = custom_openapi
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8000)

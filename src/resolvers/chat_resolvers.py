@@ -8,19 +8,9 @@ from sqlalchemy.orm import Session
 from strawberry.types import Info
 
 from src.data.chat import insert_message
-from src.data.models.chat import (
-    Chat,
-    Message as MessageModel,
-)
+from src.data.models.chat import Message as MessageModel
 from src.services.sherpa import get_sherpa_response
 from src.utils.logger import logger
-
-
-@strawberry.type
-class ChatOutput:
-    id: uuid.UUID
-    title: str
-    created_at: datetime
 
 
 @strawberry.enum
@@ -39,17 +29,6 @@ class MessageOutput:
     created_at: datetime
 
 
-def chat_to_gql(chats: List[Chat]) -> List[ChatOutput]:
-    try:
-        return [
-            ChatOutput(**{field: getattr(chat, field) for field in ["id", "title", "created_at"]})
-            for chat in chats
-        ]
-    except AttributeError as e:
-        logger.error(f"Error converting ChatModel to Chat: {e}")
-        raise ValueError("Invalid ChatModel data")
-
-
 def message_to_gql(message: MessageModel) -> MessageOutput:
     try:
         return MessageOutput(
@@ -58,28 +37,6 @@ def message_to_gql(message: MessageModel) -> MessageOutput:
     except AttributeError as e:
         logger.error(f"Error converting MessageModel to Message: {e}")
         raise ValueError("Invalid MessageModel data")
-
-
-async def chats(info: strawberry.Info) -> List[ChatOutput]:
-    if not info.context.get("user"):
-        raise Exception("Unauthorized")
-
-    session = info.context.get("session")
-    profile_id = info.context.get("profile").id
-    chats = session.query(Chat).filter(Chat.profile_id == profile_id).all()
-
-    if len(chats) == 0:
-        # Create a new chat if none exists
-        new_chat = Chat(
-            title="New Chat",
-            profile_id=profile_id,
-        )
-        session.add(new_chat)
-        session.commit()
-
-        return chat_to_gql([new_chat])
-
-    return chat_to_gql(chats)
 
 
 @strawberry.type

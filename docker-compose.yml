@@ -11,8 +11,9 @@ services:
       - .:/app
       - /app/__pycache__/
     environment:
-      - CHROMA_HOST=chroma
-      - CHROMA_PORT=8000
+      CHROMA_HOST: chroma
+      CHROMA_PORT: 8000
+      DATABASE_URL: "postgresql+psycopg2://postgres:postgres@postgres:5432/postgres"
     command: uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
     # command:
     #   [
@@ -49,6 +50,20 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
+    depends_on:
+      - postgres
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    ports:
+      - "8100:8000"
+    environment:
+      ENV: test
+      DATABASE_URL: "postgresql+psycopg2://postgres:postgres@postgres:5432/postgres-test"
+    volumes:
+      - .:/app
     depends_on:
       - postgres
 

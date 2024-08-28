@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 from uuid import UUID
 
@@ -7,9 +8,15 @@ from pydantic.main import BaseModel
 
 from src.data.models.chat import Chat, ChatState, Message
 from src.data.models.user import User
-from src.resolvers.chat_resolvers import ChatOutput, MessageOutput, message_to_gql
+from src.resolvers.chat_resolvers import MessageOutput, message_to_gql
 
 chat_router = APIRouter()
+
+
+class ChatOutput(BaseModel):
+    id: UUID
+    title: str
+    created_at: datetime
 
 
 @chat_router.get("/active")
@@ -31,7 +38,7 @@ async def get_active_chat(request: Request) -> ChatOutput | None:
     if chat is None:
         raise ValueError("Chat not found")
 
-    return ChatOutput(**{field: getattr(chat, field) for field in ChatOutput.__dataclass_fields__})
+    return ChatOutput(**chat.__dict__)
 
 
 class EndChatPayload(BaseModel):
@@ -61,7 +68,7 @@ async def end_chat(request: Request, input: EndChatPayload) -> ChatOutput | None
     session.add(new_chat)
     session.commit()
 
-    return ChatOutput(**{field: getattr(new_chat, field) for field in ChatOutput.__dataclass_fields__})
+    return ChatOutput(**chat.__dict__)
 
 
 @chat_router.get("/{chat_id}")

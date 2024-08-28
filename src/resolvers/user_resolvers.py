@@ -1,48 +1,49 @@
+import uuid
+from typing import Optional
+
+import strawberry
 from fastapi import HTTPException
 from jwt.exceptions import InvalidTokenError
 from sqlalchemy.orm import Session
 from strawberry.types import Info
-import strawberry
 
-
-from src.data.models import User, Profile
+from src.data.models.user import (
+    Profile,
+    User,
+    create_profile,
+    create_user,
+    get_profile_by_user_id,
+    get_user_by_user_id,
+)
 from src.resolvers.tokens import (
     RefreshTokenService,
     create_access_token,
     verify_apple_token,
 )
-from src.services.supabase import supabase_client
 from src.schemas.types import (
     AuthPayload,
     CreateUserInput,
     CreateUserPayload,
     UpdateProfileInput,
 )
+from src.services.supabase import supabase_client
 
 
 def get_user_by_token(session: Session, token: str) -> tuple[User, Profile]:
     try:
         response = supabase_client.auth.get_user(token)
         if response is None:
-            raise HTTPException(
-                status_code=403, detail="Invalid authentication credentials"
-            )
+            raise HTTPException(status_code=403, detail="Invalid authentication credentials")
 
         user_id = response.user.id
-        user = session.query(User).filter(User.id == user_id).first()
+        user = get_user_by_user_id(session, uuid.UUID(user_id))
         if not user:
-            user = User(
-                id=user_id,
-                email=response.user.email,
-            )
-            session.add(user)
-            session.commit()
+            # We are ignoring the type on the next line because email is required by this application
+            user = create_user(session, user_id, response.user.email)  # type: ignore
 
-        profile = session.query(Profile).filter(Profile.user_id == user_id).first()
+        profile = get_profile_by_user_id(session=session, user_id=user.id)
         if not profile:
-            profile = Profile(provider="apple", user_id=user.id)
-            session.add(profile)
-            session.commit()
+            profile = create_profile(session, user.id)
 
         return user, profile
     except IndexError:
@@ -82,14 +83,10 @@ async def save_apple_user(info: Info, id_token: str, nonce: str) -> AuthPayload:
     access_token = create_access_token({"sub": str(user.id)})
     refresh_token = RefreshTokenService.create_refresh_token({"sub": str(user.id)})
 
-    return AuthPayload(
-        user_id=user.id, access_token=access_token, refresh_token=refresh_token
-    )
+    return AuthPayload(user_id=user.id, access_token=access_token, refresh_token=refresh_token)
 
 
-async def create_user_and_profile(
-    info: Info, input: CreateUserInput
-) -> CreateUserPayload:
+async def create_user_and_profile(info: Info, input: CreateUserInput) -> CreateUserPayload:
     session: Session = info.context["session"]
 
     user = User(email=input.email)
@@ -131,11 +128,7 @@ async def update_profile(info: Info, input: UpdateProfileInput) -> Profile:
     if not info.context.get("user"):
         raise ValueError("Not authenticated")
 
-    profile = (
-        session.query(Profile)
-        .filter(Profile.user_id == info.context["user"].id)
-        .first()
-    )
+    profile = session.query(Profile).filter(Profile.user_id == info.context["user"].id).first()
 
     if not profile:
         raise ValueError("Profile does not exist")
@@ -147,19 +140,18 @@ async def update_profile(info: Info, input: UpdateProfileInput) -> Profile:
 
     return profile
 
-async def sign_up_with_email(
-        self, info: strawberry.Info, email: str
-    ) -> CreateUserPayload:
-        if info.context.get("user"):
-            raise ValueError("Already authenticated")
 
-        if not email:
-            raise ValueError("Email is required")
+async def sign_up_with_email(self, info: strawberry.Info, email: str) -> CreateUserPayload:
+    if info.context.get("user"):
+        raise ValueError("Already authenticated")
 
-        session = info.context.get("session")
-        user = User(email=email)
-        session.add(user)
-        session.commit()
+    if not email:
+        raise ValueError("Email is required")
 
-        profile = Profile(user_id=user.id, provider="email")
-        return CreateUserPayload(user=user, profile=profile)
+    session = info.context.get("session")
+    user = User(email=email)
+    session.add(user)
+    session.commit()
+
+    profile = Profile(user_id=user.id, provider="email")
+    return CreateUserPayload(user=user, profile=profile)

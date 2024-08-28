@@ -1,5 +1,6 @@
 import pytest
-from generation_statistics import GenerationStatistics
+
+from src.utils.generation_statistics import GenerationStatistics
 
 
 def test_init():
@@ -55,7 +56,3 @@ def test_str():
     assert "| Inference Time (s) | 1.00" in result
     assert "| 2.00" in result
     assert "| 5.00" in result
-
-
-if __name__ == "__main__":
-    pytest.main()

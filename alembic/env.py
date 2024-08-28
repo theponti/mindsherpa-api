@@ -2,29 +2,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from alembic import context  # noqa: E402
-from logging.config import fileConfig  # noqa: E402
 import os  # noqa: E402
+from logging.config import fileConfig  # noqa: E402
 
-from sqlalchemy import engine_from_config  # noqa: E402
-from sqlalchemy import pool  # noqa: E402
+from sqlalchemy import (
+    engine_from_config,  # noqa: E402
+    pool,  # noqa: E402
+)
+
+from alembic import context  # noqa: E402
 
 from src.data.db import Base  # noqa: E402
-from src.data.models.action import Action
-from src.data.models.chat import Chat, Message
-from src.data.models.context import Context, SystemState
-from src.data.models.entity import Entity
-from src.data.models.entity_memory import EntityMemory
-from src.data.models.focus import Focus
-from src.data.models.memory import Memory
-from src.data.models.memory_tags import memory_tags
-from src.data.models.note import Note
-from src.data.models.note_tags import note_tags
-from src.data.models.queue import Queue
-from src.data.models.relationship import Relationship
-from src.data.models.tag import Tag
-from src.data.models.user import User, Profile
-
+from src.data.models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

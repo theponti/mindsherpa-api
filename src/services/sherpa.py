@@ -1,9 +1,10 @@
 import uuid
-from typing import Annotated, Required
+from typing import Annotated, List, Optional, Required
 
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel
+from pydantic.fields import Field
 from sqlalchemy.orm import Session
 from typing_extensions import Any
 
@@ -57,6 +58,7 @@ def process_user_input(user_input: str) -> LLMFocusOutput:
         # 👇 Get the LLM response
         llm_response = chain.invoke({"user_input": user_input})
 
+        print(llm_response)
         # 👇 Convert due dates use `hotdate`
         with_due_dates = []
         for item in llm_response["items"]:
@@ -70,9 +72,16 @@ def process_user_input(user_input: str) -> LLMFocusOutput:
         raise e
 
 
+class SherpaResponseMetadata(BaseModel):
+    user_query_category: str
+    related_context_items: List[str] = Field(
+        default_factory=list, description="List of User Context items that are related to the user query."
+    )
+
+
 class SherpaResponse(BaseModel):
     message: str
-    metadata: Any
+    metadata: Optional[SherpaResponseMetadata] = None
 
 
 def get_sherpa_response(
@@ -91,7 +100,7 @@ def get_sherpa_response(
         )
 
         # Get the LLM response
-        chain = prompt_template | groq_chat | parser
+        chain = prompt_template | groq_chat
         llm_response = chain.invoke(
             {
                 "chat_history": "\n".join(user_context.chat_history),
@@ -100,9 +109,16 @@ def get_sherpa_response(
             }
         )
 
-        print(llm_response["message"])
-        print(llm_response["metadata"])
-        return SherpaResponse(message=llm_response["message"], metadata=llm_response["metadata"])
+        logger.info("LLM Metadata", llm_response.response_metadata)
+        if isinstance(llm_response.content, str):
+            try:
+                parsed = parser.parse(llm_response.content)
+                print(parsed["metadata"])
+                return SherpaResponse(message=parsed["message"], metadata=parsed["metadata"])
+            except Exception as e:
+                return SherpaResponse(message=llm_response.content)
+        else:
+            raise Exception("LLM Response is not a string")
     except Exception as e:
         logger.error(f"Generating sherpa response: {e}")
         raise e

@@ -1,9 +1,11 @@
+import uuid
+
 import strawberry
 
 
 @strawberry.type
 class AuthPayload:
-    user_id: str
+    user_id: uuid.UUID
     access_token: str
     refresh_token: str
 

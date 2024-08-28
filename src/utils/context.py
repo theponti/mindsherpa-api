@@ -25,7 +25,7 @@ class ContextMiddleware(BaseHTTPMiddleware):
             if not authorization:
                 return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    content={"detail": "Missing Authorization header"},
+                    content={"detail": "Unauthorized"},
                 )
             # Extract the token from the Authorization header
             token = authorization.split(" ")[1]
