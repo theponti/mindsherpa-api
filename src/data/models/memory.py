@@ -1,14 +1,16 @@
+import uuid
 from datetime import datetime
-from sqlalchemy import Column, DateTime, Float, ForeignKey, String, UUID, func
-from sqlalchemy.orm import relationship
+
+from sqlalchemy import UUID, Column, DateTime, Float, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.data.db import Base
 
 
 class Memory(Base):
     __tablename__ = "memories"
-    id = Column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.uuid_generate_v4()
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
     )
     content = Column(String, nullable=False)
     importance = Column(Float)

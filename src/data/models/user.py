@@ -1,40 +1,45 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Optional
 
-from sqlalchemy import UUID, Column, DateTime, ForeignKey, String, func
+from sqlalchemy import UUID, Boolean, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from src.data.db import Base
+from src.utils.security import REFRESH_TOKEN_EXPIRE_DAYS
 
 
 class User(Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.uuid_generate_v4()
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
     )
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     profile = relationship("Profile", back_populates="user")
-    # refresh_tokens = relationship("RefreshToken", back_populates="user")
+    refresh_tokens = relationship("RefreshToken", back_populates="user")
 
     def __repr__(self):
         return f"<User(id={self.id}, name={self.name})>"
 
 
-# User.
-
-
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default=func.uuid_generate_v4())
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
+    )
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, unique=True)
+    user = relationship("User", back_populates="refresh_tokens")
     token = Column(String, unique=True, nullable=False)
     revoked = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.now(UTC))
+    expires_at = Column(
+        DateTime, nullable=False, default=datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    )
 
     def __repr__(self):
         return f"<RefreshToken(id={self.id}, user_id={self.user_id})>"
@@ -42,7 +47,9 @@ class RefreshToken(Base):
 
 class Profile(Base):
     __tablename__ = "profiles"
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default=func.uuid_generate_v4())
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
+    )
     full_name = Column(String, nullable=True)
     provider = Column(String, nullable=False)
 

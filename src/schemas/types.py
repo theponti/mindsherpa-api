@@ -50,3 +50,5 @@ class CreateUserInput:
 class CreateUserPayload:
     user: User
     profile: Profile
+    access_token: str
+    refresh_token: str

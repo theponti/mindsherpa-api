@@ -19,6 +19,7 @@ class Category(Enum):
     EDUCATION = "education"
     RELATIONSHIPS = "relationships"
     HOME = "home"
+    SHOPPING = "shopping"
     INTERESTS = "interests"
     ADVENTURE = "adventure"
     TECHNOLOGY = "technology"

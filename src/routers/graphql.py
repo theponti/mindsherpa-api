@@ -1,17 +1,20 @@
-from fastapi import Request
-import strawberry
-from strawberry.fastapi import GraphQLRouter
 from typing import Any, AsyncGenerator
 
-from src.schemas.query import Query
-from src.schemas.mutation import Mutation
+import strawberry
+from strawberry.fastapi import GraphQLRouter
 
-async def get_context(request: Request) -> AsyncGenerator[dict[str, Any], None]:
+from src.schemas.mutation import Mutation
+from src.schemas.query import Query
+from src.utils.context import CurrentProfile, CurrentUser, SessionDep
+
+
+async def get_context(
+    db: SessionDep, user: CurrentUser, profile: CurrentProfile
+) -> AsyncGenerator[dict[str, Any], None]:
     yield {
-        "request": request,
-        "user": request.state.user,
-        "profile": request.state.profile,
-        "session": request.state.session,
+        "user": user,
+        "profile": profile,
+        "session": db,
     }
 
 

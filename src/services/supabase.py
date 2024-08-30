@@ -1,7 +1,5 @@
-import os
-from supabase import create_client, Client
+from supabase import Client, create_client
 
-SUPABASE_URL: str = os.environ.get("SUPABASE_URL") or ""
-SUPABASE_KEY: str = os.environ.get("SUPABASE_KEY") or ""
+from src.utils.config import settings
 
-supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase_client: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)

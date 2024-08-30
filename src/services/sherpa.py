@@ -6,7 +6,6 @@ from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel
 from pydantic.fields import Field
 from sqlalchemy.orm import Session
-from typing_extensions import Any
 
 from src.data.context import get_user_context
 from src.data.models.chat import Message
@@ -140,7 +139,7 @@ def get_chat_summary(
     ### Chat Transcript
     {chat_history}
     """.format(
-        existing_items="\n".join([f"{item.type.capitalize()}: {item.text}" for item in existing_focus_items]),
-        chat_history="\n".join([f"{message.role.capitalize()}: {message.message}" for message in messages]),
+        existing_items="\n".join([f"{item.type}: {item.text}" for item in existing_focus_items]),
+        chat_history="\n".join([f"{message.role}: {message.message}" for message in messages]),
     )
     return process_user_input(user_input=transcript)

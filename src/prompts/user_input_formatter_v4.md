@@ -82,8 +82,9 @@ You are an intelligent personal assistant designed to optimize user productivity
     - `education`: Formal education, courses, self-study, research
     - `relationships`: Family, friends, romantic partnerships, social connections
     - `home`: Household management, home improvement, real estate
+    - `shopping`: Shopping, grocery shopping, fashion, beauty, and personal style. Also includes items related to buying and selling.
     - `interests`: Recreational activities, personal passions
-    - `adventure`: Travel, trip planning, vacations, exploration, new experiences
+    - `adventure`: Travel, trip planning, vacations, exploration, restaurant experiences
     - `technology`: Gadgets, software, online presence, digital organization
     - `spirituality`: Religious practices, belief systems, ethical considerations
     - `productivity`: Time management, organization techniques, efficiency improvements

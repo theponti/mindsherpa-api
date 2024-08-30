@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 import strawberry
 from fastapi import HTTPException
@@ -15,11 +14,6 @@ from src.data.models.user import (
     get_profile_by_user_id,
     get_user_by_user_id,
 )
-from src.resolvers.tokens import (
-    RefreshTokenService,
-    create_access_token,
-    verify_apple_token,
-)
 from src.schemas.types import (
     AuthPayload,
     CreateUserInput,
@@ -27,9 +21,10 @@ from src.schemas.types import (
     UpdateProfileInput,
 )
 from src.services.supabase import supabase_client
+from src.utils.security import AccessTokenSubject, TokenService
 
 
-def get_user_by_token(session: Session, token: str) -> tuple[User, Profile]:
+def get_user_by_token(session: Session, token: str) -> User:
     try:
         response = supabase_client.auth.get_user(token)
         if response is None:
@@ -37,51 +32,41 @@ def get_user_by_token(session: Session, token: str) -> tuple[User, Profile]:
 
         user_id = response.user.id
         user = get_user_by_user_id(session, uuid.UUID(user_id))
-        if not user:
-            # We are ignoring the type on the next line because email is required by this application
-            user = create_user(session, user_id, response.user.email)  # type: ignore
-
-        profile = get_profile_by_user_id(session=session, user_id=user.id)
-        if not profile:
-            profile = create_profile(session, user.id)
-
-        return user, profile
+        return user
     except IndexError:
         raise HTTPException(status_code=401, detail="Invalid authorization header")
     except Exception as e:
-        print(e)
         raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
 
 
 async def save_apple_user(info: Info, id_token: str, nonce: str) -> AuthPayload:
-    # Verify the Apple ID token
     try:
-        apple_payload = verify_apple_token(id_token, nonce)
+        apple_payload = TokenService.verify_apple_token(id_token, nonce)
     except InvalidTokenError:
         raise ValueError("Invalid Apple ID token")
 
     apple_id = apple_payload["sub"]
     email = apple_payload.get("email")
 
-    # Get the database session from the context
     session: Session = info.context["session"]
-
-    # Check if the user already exists
     user = session.query(User).filter(User.apple_id == apple_id).first()
 
     if user is None:
-        # Create a new user
         user = User(apple_id=apple_id, email=email)
         session.add(user)
         session.commit()
     elif email and user.email != email:
-        # Update the email if it has changed
         user.email = email
         session.commit()
 
+    access_token_subject = AccessTokenSubject(
+        id=str(user.id),
+        email=user.email,
+        name=user.name,
+    )
     # Create access and refresh tokens
-    access_token = create_access_token({"sub": str(user.id)})
-    refresh_token = RefreshTokenService.create_refresh_token({"sub": str(user.id)})
+    access_token = TokenService.create_access_token(subject=access_token_subject)
+    refresh_token = TokenService.create_refresh_token(access_token_subject)
 
     return AuthPayload(user_id=user.id, access_token=access_token, refresh_token=refresh_token)
 
@@ -97,10 +82,17 @@ async def create_user_and_profile(info: Info, input: CreateUserInput) -> CreateU
     session.add(profile)
     session.commit()
 
-    # access_token = create_access_token({"sub": str(user.id)})
-    # refresh_token = create_refresh_token({"sub": str(user.id)})
+    access_token_subject = AccessTokenSubject(
+        id=str(user.id),
+        email=user.email,
+        name=user.name,
+    )
+    access_token = TokenService.create_access_token(subject=access_token_subject)
+    refresh_token = TokenService.create_refresh_token(access_token_subject)
 
-    return CreateUserPayload(user=user, profile=profile)
+    return CreateUserPayload(
+        user=user, profile=profile, access_token=access_token, refresh_token=refresh_token
+    )
 
 
 @strawberry.type
@@ -114,7 +106,7 @@ async def get_profile(info: Info) -> GetProfileOutput:
     profile: Profile | None = info.context.get("profile")
 
     if not info.context.get("user") or not profile:
-        raise ValueError("Not authenticated")
+        raise ValueError("Unauthorized")
 
     return GetProfileOutput(
         id=str(profile.id),
@@ -126,7 +118,7 @@ async def get_profile(info: Info) -> GetProfileOutput:
 async def update_profile(info: Info, input: UpdateProfileInput) -> Profile:
     session: Session = info.context["session"]
     if not info.context.get("user"):
-        raise ValueError("Not authenticated")
+        raise ValueError("Unauthorized")
 
     profile = session.query(Profile).filter(Profile.user_id == info.context["user"].id).first()
 
@@ -141,17 +133,17 @@ async def update_profile(info: Info, input: UpdateProfileInput) -> Profile:
     return profile
 
 
-async def sign_up_with_email(self, info: strawberry.Info, email: str) -> CreateUserPayload:
-    if info.context.get("user"):
-        raise ValueError("Already authenticated")
+async def refresh_token(info: Info, refresh_token: str) -> AuthPayload:
+    payload = TokenService.decode_access_token(refresh_token)
 
-    if not email:
-        raise ValueError("Email is required")
+    session: Session = info.context["session"]
+    user = session.query(User).filter(User.id == payload.sub.id).first()
 
-    session = info.context.get("session")
-    user = User(email=email)
-    session.add(user)
-    session.commit()
+    if user is None:
+        raise ValueError("User not found")
 
-    profile = Profile(user_id=user.id, provider="email")
-    return CreateUserPayload(user=user, profile=profile)
+    subject = AccessTokenSubject(id=str(user.id), email=user.email, name=user.name)
+    access_token = TokenService.create_access_token(subject=subject)
+    new_refresh_token = TokenService.create_refresh_token(subject)
+
+    return AuthPayload(user_id=user.id, access_token=access_token, refresh_token=new_refresh_token)

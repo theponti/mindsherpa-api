@@ -1,14 +1,21 @@
 {
   "cSpell.ignoreWords": [
-    "sqlalchemy",
-    "openai",
-    "pydantic",
-    "supabase",
-    "groq",
-    "fastapi",
-    "uvicorn",
+    "autoflush",
     "dotenv",
-    "sessionmaker"
+    "fastapi",
+    "groq",
+    "langchain",
+    "Mindsherpa",
+    "mixtral",
+    "onupdate",
+    "openai",
+    "psycopg",
+    "pydantic",
+    "sessionmaker",
+    "sqlalchemy",
+    "starlette",
+    "supabase",
+    "uvicorn"
   ],
-  "cSpell.words": ["autoflush", "langchain", "Mindsherpa", "mixtral"]
+  "cSpell.words": ["cfgv", "hotdate"]
 }

@@ -8,8 +8,8 @@ from src.routers.chat import chat_router
 from src.routers.graphql import graphql_router
 from src.routers.notes import notes_router
 from src.routers.tasks import task_router
-from src.utils.context import ContextMiddleware
 
+# Create FastAPI app
 app = FastAPI()
 
 # Allow CORS for all origins for simplicity
@@ -26,7 +26,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 # Routers
-app.add_middleware(ContextMiddleware)
 app.include_router(ai_router)
 app.include_router(graphql_router, prefix="/graphql")
 app.include_router(notes_router, prefix="/notes")

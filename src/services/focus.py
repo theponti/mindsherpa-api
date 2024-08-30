@@ -1,3 +1,4 @@
+import uuid
 from typing import List
 
 from sqlalchemy.orm import Session
@@ -9,7 +10,7 @@ from src.types.llm_output_types import LLMFocusItem
 
 
 def create_focus_items(
-    focus_items: List[LLMFocusItem], profile_id: str, session: Session
+    focus_items: List[LLMFocusItem], profile_id: uuid.UUID, session: Session
 ) -> List[Focus]:
     try:
         created_items = [
@@ -33,7 +34,7 @@ def create_focus_items(
         return []
 
 
-def create_focus_from_text(text: str, profile_id: str, session: Session) -> List[Focus]:
+def create_focus_from_text(text: str, profile_id: uuid.UUID, session: Session) -> List[Focus]:
     try:
         focus_items = process_user_input(user_input=text)
         created_items = create_focus_items(focus_items.items, profile_id, session)
@@ -43,7 +44,7 @@ def create_focus_from_text(text: str, profile_id: str, session: Session) -> List
         return []
 
 
-def create_note(session: Session, content: str, profile_id: str) -> Note | None:
+def create_note(session: Session, content: str, profile_id: uuid.UUID) -> Note | None:
     try:
         note = Note(content=content, profile_id=profile_id)
         session.add(note)

@@ -31,6 +31,7 @@ class Category(str, Enum):
     education = "education"
     relationships = "relationships"
     home = "home"
+    shopping = "shopping"
     interests = "interests"
     adventure = "adventure"
     technology = "technology"
@@ -60,7 +61,9 @@ class LLMFocusItem(BaseModel):
     type: ItemType
     task_size: TaskSize
     text: str
-    category: Category
+    category: Category = Field(
+        description="Shopping, grocery shopping, fashion, beauty, and personal style. Also includes items related to buying and selling.",
+    )
     priority: int = Field(ge=1, le=5)
     sentiment: Sentiment
     due_date: Optional[str]

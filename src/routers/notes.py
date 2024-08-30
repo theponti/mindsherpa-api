@@ -13,6 +13,7 @@ from src.services.focus import create_focus_items, create_note
 from src.services.openai_service import openai_client
 from src.services.sherpa import process_user_input
 from src.types.llm_output_types import LLMFocusItem
+from src.utils.context import CurrentProfile, SessionDep
 from src.utils.logger import logger
 
 notes_router = APIRouter()
@@ -31,11 +32,11 @@ class CreateNoteOutput(BaseModel):
 
 @notes_router.post("/text")
 async def create_text_note_route(
-    input: CreateNoteInput, request: Request
+    db: SessionDep, profile: CurrentProfile, input: CreateNoteInput
 ) -> CreateNoteOutput | bool:
-    profile_id = request.state.profile.id
+    profile_id = profile.id
     try:
-        note = create_note(request.state.session, input.content, profile_id)
+        note = create_note(db, input.content, profile_id)
         if not note:
             return False
 
@@ -49,7 +50,7 @@ async def create_text_note_route(
         )
     except Exception as e:
         logger.error(f"Error creating note: {e}")
-        return False
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 class AudioUpload(BaseModel):
@@ -59,9 +60,9 @@ class AudioUpload(BaseModel):
 
 @notes_router.post("/voice")
 async def upload_voice_note(
-    audio: AudioUpload, request: Request
+    audio: AudioUpload, db: SessionDep, profile: CurrentProfile
 ) -> CreateNoteOutput | bool:
-    profile_id = request.state.profile.id
+    profile_id = profile.id
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -78,7 +79,7 @@ async def upload_voice_note(
                 )
 
         formatted_transcription = str(transcription)
-        note = create_note(request.state.session, formatted_transcription, profile_id)
+        note = create_note(db, formatted_transcription, profile_id)
         if not note:
             return False
 
@@ -106,9 +107,7 @@ async def upload_voice_note(
                 detail=f"File size error. Please ensure your audio file is within the size limit. Error: {error_message}",
             )
         else:
-            raise HTTPException(
-                status_code=500, detail=f"An unexpected error occurred: {error_message}"
-            )
+            raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {error_message}")
 
 
 class CreateFocusItemInput(BaseModel):
@@ -117,12 +116,12 @@ class CreateFocusItemInput(BaseModel):
 
 @notes_router.post("/focus")
 async def create_focus_item_route(
-    input: CreateFocusItemInput, request: Request
+    input: CreateFocusItemInput, db: SessionDep, profile: CurrentProfile
 ) -> List[FocusItem] | bool:
     created_items = create_focus_items(
         focus_items=input.items,
-        profile_id=request.state.profile.id,
-        session=request.state.session,
+        profile_id=profile.id,
+        session=db,
     )
 
     return [

@@ -8,6 +8,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.data.db import Base
 
 
+class MessageRole(enum.Enum):
+    SYSTEM = "system"
+    ASSISTANT = "assistant"
+    USER = "user"
+
+
 class ChatState(enum.Enum):
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
@@ -17,11 +23,11 @@ class ChatState(enum.Enum):
 class Chat(Base):
     __tablename__ = "chats"
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.uuid_generate_v4()
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
     )
     title: Mapped[str] = mapped_column(String, nullable=False)
     profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profiles.id"))
-    state: Mapped[ChatState] = mapped_column(String, nullable=False, default=ChatState.ACTIVE.value)
+    state: Mapped[str] = mapped_column(String, nullable=False, default=ChatState.ACTIVE.value)
 
     # Metadata
     created_at: Mapped[datetime.datetime] = mapped_column(
@@ -44,7 +50,7 @@ class Chat(Base):
 class Message(Base):
     __tablename__ = "messages"
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.uuid_generate_v4()
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
     )
     message: Mapped[str] = mapped_column(String)
     role: Mapped[str] = mapped_column(String, nullable=False)
