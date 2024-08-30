@@ -16,7 +16,7 @@ from src.utils.logger import logger
 from src.utils.security import ACCESS_TOKEN_EXPIRE_MINUTES, AccessTokenSubject, TokenService
 
 # Test database URL
-TEST_DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/test_db"
+TEST_DATABASE_URL = "postgresql://postgres:postgres@localhost:5434/test_db"
 
 
 @pytest.fixture(scope="session")

@@ -83,6 +83,7 @@ def create_user(session: Session, user_id: str, email: str) -> User:
     )
     session.add(user)
     session.commit()
+    session.refresh(user)
     return user
 
 

@@ -1,8 +1,11 @@
+import json
 import uuid
 
+import jwt
 import strawberry
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from jwt.exceptions import InvalidTokenError
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from strawberry.types import Info
 
@@ -11,7 +14,6 @@ from src.data.models.user import (
     User,
     create_profile,
     create_user,
-    get_profile_by_user_id,
     get_user_by_user_id,
 )
 from src.schemas.types import (
@@ -21,22 +23,53 @@ from src.schemas.types import (
     UpdateProfileInput,
 )
 from src.services.supabase import supabase_client
+from src.utils import security
+from src.utils.config import settings
+from src.utils.logger import logger
 from src.utils.security import AccessTokenSubject, TokenService
 
 
 def get_user_by_token(session: Session, token: str) -> User:
     try:
-        response = supabase_client.auth.get_user(token)
-        if response is None:
-            raise HTTPException(status_code=403, detail="Invalid authentication credentials")
+        if settings.ENVIRONMENT == "test":
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.JWT_ALGORITHM])
+            sub = json.loads(payload["sub"])
+            email = sub["email"]
+            user = session.query(User).filter(User.email == email).first()
+        else:
+            response = supabase_client.auth.get_user(token)
+            if response is None or response.user is None:
+                raise HTTPException(status_code=403, detail="Invalid authentication credentials")
+            user_id = response.user.id
+            user = get_user_by_user_id(session, uuid.UUID(user_id))
+            # If the user has Supabase auth but not a local user, create a local user and profile
+            if not user and response.user.email is not None:
+                user = create_user(session, user_id=user_id, email=response.user.email)
+                profile = create_profile(session, user_id=user.id, provider="apple")
 
-        user_id = response.user.id
-        user = get_user_by_user_id(session, uuid.UUID(user_id))
+        if not user:
+            raise HTTPException(status_code=400, detail="User not found")
+        elif not user.is_active:
+            raise HTTPException(status_code=400, detail="Inactive user")
+
         return user
-    except IndexError:
-        raise HTTPException(status_code=401, detail="Invalid authorization header")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
+    except (Exception, HTTPException, jwt.InvalidTokenError, ValidationError) as e:
+        if isinstance(e, HTTPException):
+            raise e
+        elif isinstance(e, jwt.InvalidTokenError):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Invalid authentication credentials"
+            )
+        elif isinstance(e, ValidationError):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Invalid authentication credentials: {str(e)}",
+            )
+        elif isinstance(e, IndexError):
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+        else:
+            logger.error(f"Error getting user: {str(e)}")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Unauthorized: {str(e)}")
 
 
 async def save_apple_user(info: Info, id_token: str, nonce: str) -> AuthPayload:
