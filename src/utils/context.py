@@ -43,6 +43,8 @@ def get_current_user(db: SessionDep, request: Request) -> User:
     # If the environment is not test, we can retrieve the user from Supabase.
     if settings.ENVIRONMENT != "test":
         user = get_user_by_token(db, token)
+        if not user:
+            raise HTTPException(status_code=400, detail="User not found")
         return user
 
     try:

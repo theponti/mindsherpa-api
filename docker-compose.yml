@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/postgres"
     ports:
       - "5678:5678"
       - "8002:8000"

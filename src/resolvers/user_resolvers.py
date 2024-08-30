@@ -1,4 +1,5 @@
 import uuid
+from venv import create
 
 import strawberry
 from fastapi import HTTPException
@@ -27,16 +28,25 @@ from src.utils.security import AccessTokenSubject, TokenService
 def get_user_by_token(session: Session, token: str) -> User:
     try:
         response = supabase_client.auth.get_user(token)
-        if response is None:
+        if response is None or response.user is None:
             raise HTTPException(status_code=403, detail="Invalid authentication credentials")
 
         user_id = response.user.id
         user = get_user_by_user_id(session, uuid.UUID(user_id))
+
+        # If the user has Supabase auth but not a local user, create a local user and profile
+        if user is None and response.user.email is not None:
+            user = create_user(session, user_id=user_id, email=response.user.email)
+            profile = create_profile(session, user_id=user.id, provider="apple")
+
         return user
     except IndexError:
         raise HTTPException(status_code=401, detail="Invalid authorization header")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
+        if isinstance(e, HTTPException):
+            raise e
+        else:
+            raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
 
 
 async def save_apple_user(info: Info, id_token: str, nonce: str) -> AuthPayload:

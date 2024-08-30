@@ -1,31 +1,31 @@
 services:
-  test:
-    container_name: mindsherpa-test
-    build:
-      context: .
-      dockerfile: Dockerfile.test
-    ports:
-      - "8100:8000"
-    depends_on:
-      postgres-test:
-        condition: service_healthy
-    environment:
-      JWT_SECRET: fake_jwt_secret_123
-      SUPABASE_URL: https://fake-supabase-url.com
-      SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYXRzIjoibWVvdyJ9.AuKf1TNmZnaddcU7JLs0Eugy_OkWDiGDvJK4HFsbNy4"
-      GROQ_API_KEY: fake_groq_api_key_789
-      OPENAI_API_KEY: fake_openai_api_key_012
-      CHROMA_PORT: 8000
-      CHROMA_HOST: chroma
-      ENVIRONMENT: test
-      DATABASE_URL: postgresql://postgres:postgres@postgres-test:5432/postgres
-    networks:
-      - test-network
+  # test:
+  #   container_name: mindsherpa-test
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.test
+  #   ports:
+  #     - "8100:8000"
+  #   depends_on:
+  #     postgres-test:
+  #       condition: service_healthy
+  #   environment:
+  #     JWT_SECRET: fake_jwt_secret_123
+  #     SUPABASE_URL: https://fake-supabase-url.com
+  #     SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYXRzIjoibWVvdyJ9.AuKf1TNmZnaddcU7JLs0Eugy_OkWDiGDvJK4HFsbNy4"
+  #     GROQ_API_KEY: fake_groq_api_key_789
+  #     OPENAI_API_KEY: fake_openai_api_key_012
+  #     CHROMA_PORT: 8000
+  #     CHROMA_HOST: chroma
+  #     ENVIRONMENT: test
+  #     DATABASE_URL: postgresql://postgres:postgres@postgres-test:5432/postgres
+  #   networks:
+  #     - test-network
 
   postgres-test:
     image: postgres:latest
     environment:
-      POSTGRES_DB: postgres
+      POSTGRES_DB: test_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
@@ -35,9 +35,3 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - test-network
-
-networks:
-  test-network:
-    driver: bridge
