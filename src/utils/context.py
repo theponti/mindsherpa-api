@@ -1,20 +1,12 @@
-import json
 from typing import Annotated
 
-import jwt
 from fastapi import HTTPException, Request, status
 from fastapi.params import Depends
-from fastapi.responses import JSONResponse
-from pydantic import ValidationError
 from sqlalchemy.orm import Session
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from src.data.db import SessionLocal
 from src.data.models.user import Profile, User
 from src.resolvers.user_resolvers import get_user_by_token
-from src.utils import security
-from src.utils.config import settings
-from src.utils.logger import logger
 
 
 def get_db():
@@ -40,36 +32,11 @@ def get_current_user(db: SessionDep, request: Request) -> User:
 
     token = authorization.split(" ")[1]
 
-    # If the environment is not test, we can retrieve the user from Supabase.
-    if settings.ENVIRONMENT != "test":
-        user = get_user_by_token(db, token)
-        if not user:
-            raise HTTPException(status_code=400, detail="User not found")
-        return user
+    user = get_user_by_token(db, token)
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found")
 
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[security.JWT_ALGORITHM])
-        sub = json.loads(payload["sub"])
-        email = sub["email"]
-    except (jwt.InvalidTokenError, ValidationError) as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Could not validate credentials: {str(e)}",
-        )
-
-    try:
-        user = db.query(User).filter(User.email == email).first()
-        if not user:
-            raise HTTPException(status_code=400, detail="User not found")
-        elif not user.is_active:
-            raise HTTPException(status_code=400, detail="Inactive user")
-        return user
-    except (Exception, HTTPException) as e:
-        if isinstance(e, HTTPException):
-            raise e
-        else:
-            logger.error(f"Error getting user: {str(e)}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Unauthorized: {str(e)}")
+    return user
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
