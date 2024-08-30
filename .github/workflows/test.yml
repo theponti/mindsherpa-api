@@ -4,6 +4,17 @@ on:
   pull_request:
     branches: [main] # Adjust this if your main branch has a different name
 
+env:
+  ENVIRONMENT: test
+  CHROMA_HOST: localhost
+  CHROMA_PORT: 8000
+  JWT_SECRET: fake_jwt_secret
+  GROQ_API_KEY: fake_groq_api_key
+  OPENAI_API_KEY: fake_openai_api_key
+  SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0Z2R2cW10YmJ0aWZ2Z2N0Z3Z3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTYzMjI4MjQsImV4cCI6MjAxMTg5ODgyNH0.i9QWzUY21Y4q0sZ57YB5489J7x089g64vj9229111"
+  SUPABASE_URL: "http://supabase:3000"
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5434/test_db
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -34,14 +45,7 @@ jobs:
           pip install alembic pytest
 
       - name: Run database migrations
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5434/test_db
         run: alembic upgrade head
 
       - name: Run tests
-        env:
-          ENVIRONMENT: test
-          SUPABASE_URL: "http://supabase:3000"
-          SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0Z2R2cW10YmJ0aWZ2Z2N0Z3Z3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTYzMjI4MjQsImV4cCI6MjAxMTg5ODgyNH0.i9QWzUY21Y4q0sZ57YB5489J7x089g64vj9229111"
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5434/test_db
         run: pytest tests/ -v
