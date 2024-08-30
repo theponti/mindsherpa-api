@@ -1,16 +1,10 @@
-import os
-
 import chromadb
 from chromadb import Collection
 
-CHROMA_HOST = os.getenv("CHROMA_HOST")
-CHROMA_PORT = os.getenv("CHROMA_PORT")
-
-if not CHROMA_HOST or not CHROMA_PORT:
-    raise ValueError("CHROMA_HOST and CHROMA_PORT environment variables are not set")
+from src.utils.config import settings
 
 try:
-    chroma_client = chromadb.HttpClient(host=CHROMA_HOST, port=int(CHROMA_PORT))
+    chroma_client = chromadb.HttpClient(host=settings.CHROMA_PUBLIC_URL)
 except Exception as e:
     print(f"Error connecting to chromadb: {e}")
     chroma_client = None
