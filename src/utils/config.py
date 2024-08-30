@@ -27,14 +27,13 @@ class _Settings(BaseSettings):
     DOMAIN: str = "localhost"
     ENVIRONMENT: Literal["local", "staging", "production", "test"] = "local"
     SENTRY_DSN: HttpUrl | None = None
-    CHROMA_HOST: str
-    CHROMA_PORT: int
     DATABASE_URL: str
     JWT_SECRET: str
     SUPABASE_URL: str
     SUPABASE_KEY: str
     GROQ_API_KEY: str
     OPENAI_API_KEY: str
+    CHROMA_PUBLIC_URL: str
 
     @computed_field  # type: ignore[prop-decorator]
     @property

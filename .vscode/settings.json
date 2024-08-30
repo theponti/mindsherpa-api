@@ -17,5 +17,5 @@
     "supabase",
     "uvicorn"
   ],
-  "cSpell.words": ["cfgv", "hotdate"]
+  "cSpell.words": ["cfgv", "chromadb", "hotdate"]
 }

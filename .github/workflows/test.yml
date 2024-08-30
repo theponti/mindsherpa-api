@@ -6,8 +6,7 @@ on:
 
 env:
   ENVIRONMENT: test
-  CHROMA_HOST: localhost
-  CHROMA_PORT: 8000
+  CHROMA_PUBLIC_URL: "http://localhost:8000"
   JWT_SECRET: fake_jwt_secret
   GROQ_API_KEY: fake_groq_api_key
   OPENAI_API_KEY: fake_openai_api_key
