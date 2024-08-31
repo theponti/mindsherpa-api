@@ -10,7 +10,11 @@ from src.data.db import Base
 class Context(Base):
     __tablename__ = "context"
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+        unique=True,
     )
     name = Column(String, nullable=False)
     content = Column(String, nullable=False)
@@ -25,7 +29,11 @@ class Context(Base):
 class SystemState(Base):
     __tablename__ = "system_state"
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+        unique=True,
     )
     current_focus = Column(String)
     mood = Column(String)

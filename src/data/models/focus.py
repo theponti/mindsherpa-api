@@ -58,25 +58,17 @@ class Focus(Base):
     due_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=4)
     sentiment: Mapped[str] = mapped_column(String, nullable=False, default="neutral")
-    state: Mapped[FocusState] = mapped_column(
-        String, nullable=False, default=FocusState.backlog.value
-    )
+    state: Mapped[FocusState] = mapped_column(String, nullable=False, default=FocusState.backlog.value)
     task_size: Mapped[str] = mapped_column(String, nullable=False, default="medium")
     text: Mapped[str] = mapped_column(nullable=False)
     type: Mapped[str] = mapped_column(nullable=False, default="task")
 
     # Relationships
-    profile_id: Mapped[uuid.UUID] = mapped_column(
-        UUID, ForeignKey("profiles.id"), nullable=False
-    )
+    profile_id: Mapped[uuid.UUID] = mapped_column(UUID, ForeignKey("profiles.id"), nullable=False)
 
     # Metadata
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.now(UTC)
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.now(UTC)
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(UTC))
 
     def to_json(self):
         return {

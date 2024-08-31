@@ -58,7 +58,8 @@ def get_user_by_token(session: Session, token: str) -> User:
             raise e
         elif isinstance(e, jwt.InvalidTokenError):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Invalid authentication credentials"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid authentication credentials",
             )
         elif isinstance(e, ValidationError):
             raise HTTPException(
@@ -124,7 +125,10 @@ async def create_user_and_profile(info: Info, input: CreateUserInput) -> CreateU
     refresh_token = TokenService.create_refresh_token(access_token_subject)
 
     return CreateUserPayload(
-        user=user, profile=profile, access_token=access_token, refresh_token=refresh_token
+        user=user,
+        profile=profile,
+        access_token=access_token,
+        refresh_token=refresh_token,
     )
 
 

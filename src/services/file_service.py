@@ -10,8 +10,6 @@ def get_file_contents(filepath: str):
             content = file.read()
             return content
     except FileNotFoundError:
-        raise FileNotFoundError(
-            f"Error: {filepath} does not exist in the {dir} folder."
-        )
+        raise FileNotFoundError(f"Error: {filepath} does not exist in the {dir} folder.")
     except Exception as e:
         return f"An error occurred: {str(e)}"

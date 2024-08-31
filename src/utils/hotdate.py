@@ -37,7 +37,10 @@ def convert_due_date(due_date: Dict[str, Union[str, int]]) -> str:
         if due_date["day"] == 0:
             return datetime.date(year, month, current_date.day).strftime("%Y-%m-%dT%H:%M:%SZ")
         else:
-            day = max(due_date["day"], (current_date + datetime.timedelta(days=due_date["day"])).day)
+            day = max(
+                due_date["day"],
+                (current_date + datetime.timedelta(days=due_date["day"])).day,
+            )
     else:
         try:
             day = int(due_date["day"])

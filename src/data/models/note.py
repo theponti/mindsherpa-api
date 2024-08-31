@@ -10,7 +10,11 @@ from src.data.db import Base
 class Note(Base):
     __tablename__ = "notes"
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+        unique=True,
     )
     content: Mapped[str] = mapped_column(String, nullable=False)
     profile_id: Mapped[str] = mapped_column(UUID(as_uuid=True), ForeignKey("profiles.id"))

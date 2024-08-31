@@ -10,7 +10,11 @@ from src.data.db import Base
 class Queue(Base):
     __tablename__ = "queues"
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+        unique=True,
     )
     name = Column(String, nullable=False)
     profile_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False)

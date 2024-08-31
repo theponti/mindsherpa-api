@@ -13,7 +13,11 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+        unique=True,
     )
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=True)
@@ -30,7 +34,11 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+        unique=True,
     )
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, unique=True)
     user = relationship("User", back_populates="refresh_tokens")
@@ -38,7 +46,9 @@ class RefreshToken(Base):
     revoked = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.now(UTC))
     expires_at = Column(
-        DateTime, nullable=False, default=datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+        DateTime,
+        nullable=False,
+        default=datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
     )
 
     def __repr__(self):
@@ -48,7 +58,11 @@ class RefreshToken(Base):
 class Profile(Base):
     __tablename__ = "profiles"
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+        unique=True,
     )
     full_name = Column(String, nullable=True)
     provider = Column(String, nullable=False)

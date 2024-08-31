@@ -2,7 +2,7 @@ import datetime
 import enum
 import uuid
 
-from sqlalchemy import UUID, DateTime, ForeignKey, String, func
+from sqlalchemy import UUID, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.data.db import Base
@@ -23,7 +23,11 @@ class ChatState(enum.Enum):
 class Chat(Base):
     __tablename__ = "chats"
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+        unique=True,
     )
     title: Mapped[str] = mapped_column(String, nullable=False)
     profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profiles.id"))
@@ -50,7 +54,11 @@ class Chat(Base):
 class Message(Base):
     __tablename__ = "messages"
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+        unique=True,
     )
     message: Mapped[str] = mapped_column(String)
     role: Mapped[str] = mapped_column(String, nullable=False)

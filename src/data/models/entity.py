@@ -10,7 +10,11 @@ from src.data.db import Base
 class Entity(Base):
     __tablename__ = "entities"
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+        unique=True,
     )
     name = Column(String, nullable=False)
     type = Column(String, nullable=False)

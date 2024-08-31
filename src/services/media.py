@@ -2,9 +2,9 @@ import io
 from dataclasses import dataclass
 from typing import Optional
 
-from src.utils.ai_models import audio_models
 from src.services.groq_service import groq_client
 from src.services.openai_service import openai_client
+from src.utils.ai_models import audio_models
 
 
 @dataclass
@@ -31,15 +31,12 @@ def transcribe_audio(audio_buffer: io.BytesIO, model: str) -> TranscribeAudioRes
         )
 
     elif model == "openai":
-
         transcription = openai_client.audio.transcriptions.create(
             model=audio_models[model], file=audio_buffer
         )
 
     else:
-        return TranscribeAudioResponse(
-            error="Choose an appropriate transcription model", text=None
-        )
+        return TranscribeAudioResponse(error="Choose an appropriate transcription model", text=None)
 
     results = transcription.text
 

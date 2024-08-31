@@ -74,7 +74,8 @@ def process_user_input(user_input: str) -> LLMFocusOutput:
 class SherpaResponseMetadata(BaseModel):
     user_query_category: str
     related_context_items: List[str] = Field(
-        default_factory=list, description="List of User Context items that are related to the user query."
+        default_factory=list,
+        description="List of User Context items that are related to the user query.",
     )
 
 

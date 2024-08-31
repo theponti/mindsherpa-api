@@ -16,11 +16,6 @@ packages = ["src/main"]
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
-exclude = [
-    "**/__pycache__", # cache directories
-    "./typings",      # generated type stubs
-]
-stubPath = "./typings"
 
 [tool.ruff]
 line-length = 110

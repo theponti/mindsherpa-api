@@ -10,7 +10,11 @@ from src.data.db import Base
 class Memory(Base):
     __tablename__ = "memories"
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True, unique=True
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+        unique=True,
     )
     content = Column(String, nullable=False)
     importance = Column(Float)
