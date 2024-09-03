@@ -9,7 +9,7 @@ task_router = APIRouter()
 
 
 @task_router.put("/complete/{task_id}", status_code=status.HTTP_200_OK)
-async def update_task(db: SessionDep, task_id: int):
+async def complete_task(db: SessionDep, task_id: int):
     focus_item = get_focus_by_id(db, task_id)
     if not focus_item:
         raise HTTPException(status_code=404, detail="Task not found")

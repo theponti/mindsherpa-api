@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.security import OAuth2PasswordBearer
 
 from src.routers.ai_router import ai_router
 from src.routers.chat import chat_router
 from src.routers.graphql import graphql_router
 from src.routers.notes import notes_router
 from src.routers.tasks import task_router
+from src.routers.user_router import user_router
 
 # Create FastAPI app
 app = FastAPI()
@@ -21,16 +21,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-
 # Routers
 app.include_router(ai_router)
 app.include_router(graphql_router, prefix="/graphql")
 app.include_router(notes_router, prefix="/notes")
 app.include_router(task_router, prefix="/tasks")
 app.include_router(chat_router, prefix="/chat")
+app.include_router(user_router, prefix="/user")
 
 
 # Root

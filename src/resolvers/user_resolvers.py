@@ -16,17 +16,42 @@ from src.data.models.user import (
     create_user,
     get_user_by_user_id,
 )
-from src.schemas.types import (
-    AuthPayload,
-    CreateUserInput,
-    CreateUserPayload,
-    UpdateProfileInput,
-)
 from src.services.supabase import supabase_client
 from src.utils import security
 from src.utils.config import settings
 from src.utils.logger import logger
 from src.utils.security import AccessTokenSubject, TokenService
+
+
+@strawberry.type
+class UserOutput:
+    id: str
+    email: str | None
+
+
+@strawberry.type
+class ProfileOutput:
+    id: int
+    full_name: str | None
+    user_id: str
+
+
+@strawberry.type
+class AuthPayload:
+    user_id: uuid.UUID
+    access_token: str
+    refresh_token: str
+
+
+@strawberry.input
+class UpdateProfileInput:
+    full_name: str
+    user_id: str
+
+
+@strawberry.type
+class UpdateProfilePayload:
+    profile: ProfileOutput
 
 
 def get_user_by_token(session: Session, token: str) -> User:
@@ -105,33 +130,6 @@ async def save_apple_user(info: Info, id_token: str, nonce: str) -> AuthPayload:
     return AuthPayload(user_id=user.id, access_token=access_token, refresh_token=refresh_token)
 
 
-async def create_user_and_profile(info: Info, input: CreateUserInput) -> CreateUserPayload:
-    session: Session = info.context["session"]
-
-    user = User(email=input.email)
-    session.add(user)
-    session.commit()
-
-    profile = Profile(user_id=user.id, provider="apple")
-    session.add(profile)
-    session.commit()
-
-    access_token_subject = AccessTokenSubject(
-        id=str(user.id),
-        email=user.email,
-        name=user.name,
-    )
-    access_token = TokenService.create_access_token(subject=access_token_subject)
-    refresh_token = TokenService.create_refresh_token(access_token_subject)
-
-    return CreateUserPayload(
-        user=user,
-        profile=profile,
-        access_token=access_token,
-        refresh_token=refresh_token,
-    )
-
-
 @strawberry.type
 class GetProfileOutput:
     id: str
@@ -184,3 +182,12 @@ async def refresh_token(info: Info, refresh_token: str) -> AuthPayload:
     new_refresh_token = TokenService.create_refresh_token(subject)
 
     return AuthPayload(user_id=user.id, access_token=access_token, refresh_token=new_refresh_token)
+
+
+async def current_user(info: strawberry.Info) -> UserOutput:
+    current_user = info.context.get("user")
+
+    if not current_user:
+        raise Exception("Unauthorized")
+
+    return UserOutput(id=current_user.id, email=current_user.email)

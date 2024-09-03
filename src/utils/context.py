@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from src.data.db import SessionLocal
 from src.data.models.user import Profile, User
 from src.resolvers.user_resolvers import get_user_by_token
+from src.utils.config import settings
 
 
 def get_db():
@@ -22,6 +23,12 @@ SessionDep = Annotated[Session, Depends(get_db)]
 
 
 def get_current_user(db: SessionDep, request: Request) -> User:
+    if settings.ENVIRONMENT == "local" and request.query_params.get("dev"):
+        user = db.query(User).first()
+        if not user:
+            raise HTTPException(status_code=400, detail="User not found")
+        return user
+
     authorization = request.headers.get("Authorization")
     if not authorization:
         raise HTTPException(

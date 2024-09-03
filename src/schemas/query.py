@@ -5,7 +5,7 @@ import strawberry
 from src.data.notes import get_user_notes
 from src.resolvers.focus import FocusOutput, get_focus_items
 from src.resolvers.user_resolvers import GetProfileOutput, get_profile
-from src.schemas.types import NoteOutput, User
+from src.schemas.types import NoteOutput
 
 
 @strawberry.type
@@ -33,12 +33,3 @@ class Query:
             )
             for note in note_dicts
         ]
-
-    @strawberry.field
-    async def current_user(self, info: strawberry.Info) -> User:
-        current_user = info.context.get("user")
-
-        if not current_user:
-            raise Exception("Unauthorized")
-
-        return User(id=current_user.id, email=current_user.email)

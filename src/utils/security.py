@@ -18,7 +18,7 @@ JWT_SECRET = settings.SECRET_KEY
 class AccessTokenSubject(BaseModel):
     id: str
     email: str
-    name: str
+    name: Optional[str] = None
 
 
 class AccessTokenPayload(BaseModel):
