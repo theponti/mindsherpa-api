@@ -21,6 +21,7 @@ class User(Base):
     )
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=True)
+    provider: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     profile = relationship("Profile", back_populates="user")
@@ -116,3 +117,11 @@ def get_user_by_user_id(session: Session, user_id: uuid.UUID) -> User | None:
 def get_profile_by_user_id(session: Session, user_id: uuid.UUID) -> Profile | None:
     profile = session.query(Profile).filter(Profile.user_id == user_id).first()
     return profile
+
+
+def migrate_profile_to_user(session: Session, user: User, profile: Profile) -> User:
+    user.name = profile.full_name
+    user.provider = profile.provider
+    session.add(user)
+    session.commit()
+    return user
