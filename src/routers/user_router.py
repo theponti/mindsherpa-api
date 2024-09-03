@@ -2,7 +2,6 @@ import uuid
 
 from fastapi import APIRouter, Request, status
 from fastapi.exceptions import HTTPException
-from fastapi.param_functions import Form
 from pydantic import BaseModel
 
 from src.data.models.user import Profile, User
