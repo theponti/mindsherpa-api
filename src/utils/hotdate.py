@@ -1,5 +1,11 @@
-import datetime
+from datetime import datetime, time, timedelta
 from typing import Dict, Union
+
+
+def get_end_of_today():
+    today = datetime.now().date()
+    end_of_today = datetime.combine(today, time(23, 59, 59))
+    return end_of_today
 
 
 def convert_due_date(due_date: Dict[str, Union[str, int]]) -> str:
@@ -12,7 +18,7 @@ def convert_due_date(due_date: Dict[str, Union[str, int]]) -> str:
     **Returns:**
     - str: A formatted datetime string or a description of the relative date.
     """
-    current_date = datetime.datetime.now()
+    current_date = datetime.now()
 
     # Handle relative month values
     if isinstance(due_date["month"], int):
@@ -21,7 +27,7 @@ def convert_due_date(due_date: Dict[str, Union[str, int]]) -> str:
         else:
             month = (current_date.month + due_date["month"] - 1) % 12 + 1
     else:
-        month = datetime.datetime.strptime(due_date["month"], "%B").month
+        month = datetime.strptime(due_date["month"], "%B").month
 
     # Handle relative year values
     if isinstance(due_date["year"], int):
@@ -39,7 +45,7 @@ def convert_due_date(due_date: Dict[str, Union[str, int]]) -> str:
         else:
             day = max(
                 due_date["day"],
-                (current_date + datetime.timedelta(days=due_date["day"])).day,
+                (current_date + timedelta(days=due_date["day"])).day,
             )
     else:
         try:
@@ -48,10 +54,10 @@ def convert_due_date(due_date: Dict[str, Union[str, int]]) -> str:
             print(f"Invalid day: {due_date['day']}")
             day = 0
 
-    return datetime.datetime(year, month, day).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime(year, month, day).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def datetime_to_friendly(date: datetime.datetime) -> str:
+def datetime_to_friendly(date: datetime) -> str:
     """
     Convert a datetime object to a friendly date string.
 
@@ -61,14 +67,14 @@ def datetime_to_friendly(date: datetime.datetime) -> str:
     Returns:
     str: A friendly date string.
     """
-    current_date = datetime.datetime.now()
+    current_date = datetime.now()
     time_str = date.strftime(" at %I:%M %p")
 
     if date.date() == current_date.date():
         return f"Today{time_str}"
-    elif date.date() == current_date.date() + datetime.timedelta(days=1):
+    elif date.date() == current_date.date() + timedelta(days=1):
         return f"Tomorrow{time_str}"
-    elif date.date() < current_date.date() + datetime.timedelta(days=7):
+    elif date.date() < current_date.date() + timedelta(days=7):
         return f"{date.strftime('%A')}{time_str}"
     else:
         return f"{date.strftime('%B %d, %Y')}{time_str}"

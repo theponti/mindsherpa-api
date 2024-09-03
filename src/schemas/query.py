@@ -3,7 +3,6 @@ from typing import List
 import strawberry
 
 from src.data.notes import get_user_notes
-from src.resolvers.focus import FocusOutput, get_focus_items
 from src.resolvers.user_resolvers import GetProfileOutput, get_profile
 from src.schemas.types import NoteOutput
 
@@ -11,9 +10,6 @@ from src.schemas.types import NoteOutput
 @strawberry.type
 class Query:
     profile: GetProfileOutput = strawberry.field(resolver=get_profile)
-
-    # Focus Items
-    focus: FocusOutput = strawberry.field(resolver=get_focus_items)
 
     @strawberry.field
     async def notes(self, info: strawberry.Info) -> List[NoteOutput]:

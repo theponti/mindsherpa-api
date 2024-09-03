@@ -68,11 +68,6 @@ class FocusItemTaskSize(Enum):
     EPIC = "epic"
 
 
-@strawberry.type
-class FocusOutput:
-    items: List[FocusOutputItem]
-
-
 @strawberry.input
 class DeleteFocusItemInput:
     id: int
@@ -95,45 +90,3 @@ async def delete_focus_item(info: strawberry.Info, input: DeleteFocusItemInput) 
     session.delete(note)
     session.commit()
     return DeleteFocusItemOutput(success=True)
-
-
-@strawberry.input
-class GetFocusFilter:
-    category: str
-
-
-def get_end_of_today():
-    today = datetime.now().date()
-    end_of_today = datetime.combine(today, time(23, 59, 59))
-    return end_of_today
-
-
-async def get_focus_items(info: strawberry.Info, filter: Optional[GetFocusFilter] = None) -> FocusOutput:
-    """
-    Returns notes structure content as well as total tokens and total time for generation.
-    """
-    current_user = info.context.get("user")
-    if not current_user:
-        raise Exception("Unauthorized")
-
-    session: Session = info.context.get("session")
-    profile_id = info.context.get("profile").id
-
-    query = session.query(Focus).filter(
-        Focus.profile_id == profile_id, Focus.state.notin_([FocusState.completed.value])
-    )
-
-    # Apply category filter if provided
-    if filter and filter.category:
-        query = query.filter(Focus.category == filter.category)
-
-    # Apply due date filter
-    query = query.filter(or_(Focus.due_date <= get_end_of_today(), Focus.due_date == None))
-
-    # Apply ordering
-    query = query.order_by(Focus.due_date.desc())
-
-    # Execute query
-    focus_items = query.all()
-
-    return FocusOutput(items=[item.to_output_item() for item in focus_items])

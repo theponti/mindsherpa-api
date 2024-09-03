@@ -28,6 +28,7 @@ def create_focus_items(
         ]
         session.add_all(created_items)
         session.flush()
+        session.commit()
         return created_items
     except Exception as e:
         print(f"Error creating focus items: {e}")

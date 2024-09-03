@@ -2,13 +2,13 @@ import base64
 import datetime
 import os
 import tempfile
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
-from src.data.models.focus import FocusItem
+from src.data.models.focus import Focus, FocusItem, FocusOutputItem, FocusState
 from src.services.focus import create_focus_items, create_note
 from src.services.openai_service import openai_client
 from src.services.sherpa import process_user_input
@@ -28,6 +28,40 @@ class CreateNoteOutput(BaseModel):
     content: str
     created_at: datetime.datetime
     focus_items: List[LLMFocusItem]
+
+
+class FocusOutput(BaseModel):
+    items: List[FocusOutputItem]
+
+
+@notes_router.get("/focus")
+async def get_focus_items(
+    profile: CurrentProfile, db: SessionDep, category: Optional[str] = None
+) -> FocusOutput:
+    """
+    Returns notes structure content as well as total tokens and total time for generation.
+    """
+    profile_id = profile.id
+
+    query = db.query(Focus).filter(
+        Focus.profile_id == profile_id, Focus.state.notin_([FocusState.completed.value])
+    )
+
+    # Apply category filter if provided
+    if category:
+        query = query.filter(Focus.category == category)
+
+    # Apply due date filter
+    # query = query.filter(or_(Focus.due_date <= get_end_of_today(), Focus.due_date.is_(None)))
+
+    # Apply ordering
+    query = query.order_by(Focus.due_date.desc())
+
+    # Execute query
+    focus_items = query.all()
+
+    print(focus_items)
+    return FocusOutput(items=[item.to_output_item() for item in focus_items])
 
 
 @notes_router.post("/text")
