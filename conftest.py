@@ -66,7 +66,7 @@ def auth_headers():
 
 @pytest.fixture(scope="function")
 def user(db_session):
-    user = User(id=uuid.uuid4(), email="test@example.com")
+    user = User(id=uuid.uuid4(), email="test@example.com", provider="apple")
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
