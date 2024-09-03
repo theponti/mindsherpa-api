@@ -5,7 +5,7 @@ import tempfile
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from src.data.models.focus import FocusItem
@@ -38,7 +38,7 @@ async def create_text_note_route(
     try:
         note = create_note(db, input.content, profile_id)
         if not note:
-            return False
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Note not found")
 
         focus_items = process_user_input(user_input=note.content)
 
@@ -49,6 +49,9 @@ async def create_text_note_route(
             focus_items=focus_items.items,
         )
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+
         logger.error(f"Error creating note: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 

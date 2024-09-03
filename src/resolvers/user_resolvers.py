@@ -132,21 +132,24 @@ async def save_apple_user(info: Info, id_token: str, nonce: str) -> AuthPayload:
 
 @strawberry.type
 class GetProfileOutput:
-    id: str
-    full_name: str
-    user_id: str
+    email: str
+    name: str | None
+    user_id: uuid.UUID
+    profile_id: uuid.UUID
 
 
 async def get_profile(info: Info) -> GetProfileOutput:
+    user: User | None = info.context.get("user")
     profile: Profile | None = info.context.get("profile")
 
-    if not info.context.get("user") or not profile:
+    if not user or not profile:
         raise ValueError("Unauthorized")
 
     return GetProfileOutput(
-        id=str(profile.id),
-        full_name=str(profile.full_name),
-        user_id=str(profile.user_id),
+        email=user.email,
+        name=profile.full_name,
+        user_id=user.id,
+        profile_id=profile.id,
     )
 
 

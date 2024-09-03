@@ -5,7 +5,7 @@ from fastapi.exceptions import HTTPException
 from pydantic import BaseModel
 
 from src.data.models.user import Profile, User
-from src.utils.context import SessionDep
+from src.utils.context import CurrentProfile, SessionDep
 from src.utils.security import AccessTokenSubject, TokenService
 
 user_router = APIRouter()
@@ -21,6 +21,21 @@ class CreateUserPayload(BaseModel):
 
 class CreateUserInput(BaseModel):
     email: str
+
+
+class GetProfileOutput(BaseModel):
+    id: str
+    full_name: str
+    user_id: str
+
+
+@user_router.get("/profile")
+async def get_profile(profile: CurrentProfile) -> GetProfileOutput:
+    return GetProfileOutput(
+        id=str(profile.id),
+        full_name=str(profile.full_name),
+        user_id=str(profile.user_id),
+    )
 
 
 @user_router.post("/create")

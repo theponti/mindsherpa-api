@@ -1,4 +1,10 @@
 {
+  "editor.codeActionsOnSave": {
+    "source.fixAll.ruff": "always",
+    "source.convertImportFormat": "always",
+    "source.organizeImports": "explicit",
+    "source.unusedImports": "explicit",
+  },
   "cSpell.ignoreWords": [
     "autoflush",
     "dotenv",
