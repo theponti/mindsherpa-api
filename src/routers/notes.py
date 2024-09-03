@@ -178,3 +178,14 @@ async def create_focus_item_route(
         )
         for item in created_items
     ]
+
+
+@notes_router.delete("/focus/{id}")
+async def delete_focus_item_route(id: int, db: SessionDep, profile: CurrentProfile) -> bool:
+    note = db.query(Focus).filter(Focus.id == id).first()
+    if not note:
+        return False
+
+    db.delete(note)
+    db.commit()
+    return True
