@@ -33,7 +33,13 @@ async def get_active_chat(
         )
 
         if chat is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+            chat = Chat(
+                title="New Chat",
+                profile_id=profile.id,
+            )
+            db.add(chat)
+            db.commit()
+            db.flush()
 
         return ChatOutput(
             id=chat.id,
@@ -54,13 +60,9 @@ class EndChatPayload(BaseModel):
 
 @chat_router.post("/end")
 async def end_chat(db: SessionDep, user: CurrentUser, input: EndChatPayload) -> ChatOutput | None:
-    if not user:
-        raise Exception("Unauthorized")
-
     chat = db.query(Chat).filter(Chat.id == input.chat_id).first()
-
     if chat is None:
-        raise ValueError("Chat not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
 
     chat.state = ChatState.ENDED.value
     db.add(chat)
@@ -81,12 +83,10 @@ async def end_chat(db: SessionDep, user: CurrentUser, input: EndChatPayload) -> 
 
 @chat_router.get("/{chat_id}")
 async def get_chat(db: SessionDep, user: CurrentUser, chat_id: UUID) -> list[MessageOutput] | None:
-    if not user:
-        raise Exception("Unauthorized")
-
     chat = db.query(Chat).filter(Chat.id == chat_id).first()
-    messages = db.query(Message).filter(Message.chat_id == chat_id).all()
     if chat is None:
-        raise ValueError("Chat not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+
+    messages = db.query(Message).filter(Message.chat_id == chat_id).all()
 
     return [message_to_gql(message) for message in messages]

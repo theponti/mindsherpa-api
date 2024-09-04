@@ -8,10 +8,10 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
+from src.data.focus import create_focus_items, create_note
 from src.data.models.focus import Focus, FocusItem, FocusOutputItem, FocusState
-from src.services.focus import create_focus_items, create_note
 from src.services.openai_service import openai_client
-from src.services.sherpa import process_user_input
+from src.services.sherpa import process_user_input, process_user_input_with_openai
 from src.types.llm_output_types import LLMFocusItem
 from src.utils.context import CurrentProfile, SessionDep
 from src.utils.logger import logger
@@ -35,9 +35,7 @@ class FocusOutput(BaseModel):
 
 
 @notes_router.get("/focus")
-async def get_focus_items(
-    profile: CurrentProfile, db: SessionDep, category: Optional[str] = None
-) -> FocusOutput:
+async def get_focus_items(profile: CurrentProfile, db: SessionDep, category: Optional[str] = None):
     """
     Returns notes structure content as well as total tokens and total time for generation.
     """
@@ -61,7 +59,7 @@ async def get_focus_items(
     focus_items = query.all()
 
     print(focus_items)
-    return FocusOutput(items=[item.to_output_item() for item in focus_items])
+    return {"items": focus_items}
 
 
 @notes_router.post("/text")
@@ -74,7 +72,7 @@ async def create_text_note_route(
         if not note:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Note not found")
 
-        focus_items = process_user_input(user_input=note.content)
+        focus_items = process_user_input_with_openai(user_input=note.content)
 
         return CreateNoteOutput(
             id=note.id,

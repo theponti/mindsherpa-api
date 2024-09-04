@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from src.data.context import get_user_context
 from src.data.models.chat import Message
 from src.data.models.focus import get_focus_by_profile_id
+from src.services import openai_service
 from src.services.groq_service import groq_chat
 from src.services.prompt_service import AvailablePrompts, get_prompt
 from src.types.llm_output_types import LLMFocusOutput
@@ -28,6 +29,57 @@ def log_usage(model: str, usage):
         model_name=model,
     )
     logger.info("focus_stats", statistics_to_return.get_stats())
+
+
+def process_user_input_with_openai(user_input: str) -> LLMFocusOutput:
+    """
+    Process user input and return a list of focus items using OpenAI chat completions
+
+    **Args:**
+    - user_input (str): User input
+
+    **Returns:**
+    - LLMFocusOutput: List of focus items
+    """
+    try:
+        # prompt = get_prompt(AvailablePrompts.v4).format(user_input=)
+
+        # response = openai_service.openai_client.chat.completions.create(
+        #     model="gpt-4o-mini",
+        #     messages=[
+        #         {"role": "system", "content": prompt},
+        #         {"role": "user", "content": user_input}],
+        #     max_tokens=1500
+        # )
+
+        # llm_response = response.choices[0].message['content']
+        # structured_llm = openai_service.openai_chat.with_structured_output(LLMFocusOutput, method="json_mode")
+        # 👇 Create output parser
+        parser = JsonOutputParser(pydantic_object=LLMFocusOutput)
+
+        # 👇 Create prompt template
+        prompt_template = PromptTemplate(
+            template=get_prompt(AvailablePrompts.v4),
+            input_variables=["user_input"],
+            partial_variables={"format_instructions": parser.get_format_instructions()},
+        )
+
+        # 👇 Create the LLM chain
+        chain = prompt_template | openai_service.openai_chat | parser
+
+        # 👇 Get the LLM response
+        llm_response = chain.invoke({"user_input": user_input})
+
+        with_due_dates = []
+        for item in llm_response["items"]:
+            if item["due_date"] and item["due_date"] != "None":
+                item["due_date"] = convert_due_date(item["due_date"])
+            with_due_dates.append(item)
+
+        return LLMFocusOutput(items=with_due_dates)
+    except Exception as e:
+        logger.error(f"Error processing user input with OpenAI: {e}")
+        raise e
 
 
 def process_user_input(user_input: str) -> LLMFocusOutput:
@@ -57,7 +109,6 @@ def process_user_input(user_input: str) -> LLMFocusOutput:
         # 👇 Get the LLM response
         llm_response = chain.invoke({"user_input": user_input})
 
-        print(llm_response)
         # 👇 Convert due dates use `hotdate`
         with_due_dates = []
         for item in llm_response["items"]:
@@ -115,7 +166,7 @@ def get_sherpa_response(
                 parsed = parser.parse(llm_response.content)
                 print(parsed["metadata"])
                 return SherpaResponse(message=parsed["message"], metadata=parsed["metadata"])
-            except Exception as e:
+            except Exception:
                 return SherpaResponse(message=llm_response.content)
         else:
             raise Exception("LLM Response is not a string")
