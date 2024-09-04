@@ -3,14 +3,11 @@ from typing import List
 import strawberry
 
 from src.data.notes import get_user_notes
-from src.resolvers.user_resolvers import GetProfileOutput, get_profile
 from src.schemas.types import NoteOutput
 
 
 @strawberry.type
 class Query:
-    profile: GetProfileOutput = strawberry.field(resolver=get_profile)
-
     @strawberry.field
     async def notes(self, info: strawberry.Info) -> List[NoteOutput]:
         current_user = info.context.get("user")

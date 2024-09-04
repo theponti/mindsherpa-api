@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Request, status
+from fastapi import APIRouter, status
 from fastapi.exceptions import HTTPException
 from pydantic import BaseModel
 
@@ -23,15 +23,37 @@ class CreateUserInput(BaseModel):
     email: str
 
 
-class GetProfileOutput(BaseModel):
+class ProfileOutput(BaseModel):
     id: str
     full_name: str
     user_id: str
 
 
 @user_router.get("/profile")
-async def get_profile(profile: CurrentProfile) -> GetProfileOutput:
-    return GetProfileOutput(
+async def get_profile(profile: CurrentProfile) -> ProfileOutput:
+    return ProfileOutput(
+        id=str(profile.id),
+        full_name=str(profile.full_name),
+        user_id=str(profile.user_id),
+    )
+
+
+class UpdateProfileInput(BaseModel):
+    full_name: str
+
+
+@user_router.put("/profile")
+async def update_profile(profile: CurrentProfile, db: SessionDep, input: UpdateProfileInput) -> ProfileOutput:
+    profile = db.query(Profile).filter(Profile.user_id == profile.user.id).first()
+    if not profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile does not exist")
+
+    if input.full_name:
+        setattr(profile, "full_name", input.full_name)
+
+    db.commit()
+
+    return ProfileOutput(
         id=str(profile.id),
         full_name=str(profile.full_name),
         user_id=str(profile.user_id),
@@ -39,7 +61,7 @@ async def get_profile(profile: CurrentProfile) -> GetProfileOutput:
 
 
 @user_router.post("/create")
-def create_user_and_profile(request: Request, db: SessionDep, input: CreateUserInput) -> CreateUserPayload:
+def create_user_and_profile(db: SessionDep, input: CreateUserInput) -> CreateUserPayload:
     user = db.query(User).filter(User.email == input.email).first()
     if user:
         profile = db.query(Profile).filter(Profile.user_id == user.id).first()

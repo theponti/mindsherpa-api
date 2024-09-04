@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 from strawberry.types import Info
 
 from src.data.models.user import (
-    Profile,
     User,
     create_profile,
     create_user,
@@ -41,17 +40,6 @@ class AuthPayload:
     user_id: uuid.UUID
     access_token: str
     refresh_token: str
-
-
-@strawberry.input
-class UpdateProfileInput:
-    full_name: str
-    user_id: str
-
-
-@strawberry.type
-class UpdateProfilePayload:
-    profile: ProfileOutput
 
 
 def get_user_by_token(session: Session, token: str) -> User:
@@ -130,47 +118,6 @@ async def save_apple_user(info: Info, id_token: str, nonce: str) -> AuthPayload:
     return AuthPayload(user_id=user.id, access_token=access_token, refresh_token=refresh_token)
 
 
-@strawberry.type
-class GetProfileOutput:
-    email: str
-    name: str | None
-    user_id: uuid.UUID
-    profile_id: uuid.UUID
-
-
-async def get_profile(info: Info) -> GetProfileOutput:
-    user: User | None = info.context.get("user")
-    profile: Profile | None = info.context.get("profile")
-
-    if not user or not profile:
-        raise ValueError("Unauthorized")
-
-    return GetProfileOutput(
-        email=user.email,
-        name=profile.full_name,
-        user_id=user.id,
-        profile_id=profile.id,
-    )
-
-
-async def update_profile(info: Info, input: UpdateProfileInput) -> Profile:
-    session: Session = info.context["session"]
-    if not info.context.get("user"):
-        raise ValueError("Unauthorized")
-
-    profile = session.query(Profile).filter(Profile.user_id == info.context["user"].id).first()
-
-    if not profile:
-        raise ValueError("Profile does not exist")
-
-    if input.full_name:
-        setattr(profile, "full_name", input.full_name)
-
-    session.commit()
-
-    return profile
-
-
 async def refresh_token(info: Info, refresh_token: str) -> AuthPayload:
     payload = TokenService.decode_access_token(refresh_token)
 
@@ -185,12 +132,3 @@ async def refresh_token(info: Info, refresh_token: str) -> AuthPayload:
     new_refresh_token = TokenService.create_refresh_token(subject)
 
     return AuthPayload(user_id=user.id, access_token=access_token, refresh_token=new_refresh_token)
-
-
-async def current_user(info: strawberry.Info) -> UserOutput:
-    current_user = info.context.get("user")
-
-    if not current_user:
-        raise Exception("Unauthorized")
-
-    return UserOutput(id=current_user.id, email=current_user.email)

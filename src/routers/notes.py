@@ -58,7 +58,6 @@ async def get_focus_items(profile: CurrentProfile, db: SessionDep, category: Opt
     # Execute query
     focus_items = query.all()
 
-    print(focus_items)
     return {"items": focus_items}
 
 
