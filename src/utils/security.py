@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 
 import jwt
+import jwt.algorithms
 from pydantic import BaseModel
 
 from src.utils.config import settings
@@ -45,14 +46,6 @@ class TokenService:
             subject=data,
             expires_delta=timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
         )
-
-    @staticmethod
-    def verify_apple_token(id_token: str, nonce: str) -> dict:
-        # Implement Apple ID token verification here
-        # This should validate the token with Apple's public key and verify the nonce
-        # Return the decoded token payload if valid, raise an exception if not
-        # For brevity, we're assuming the token is valid in this example
-        return {"sub": "example_apple_id", "email": "user@example.com"}
 
     @staticmethod
     def decode_access_token(token: str) -> AccessTokenPayload:

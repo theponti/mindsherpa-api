@@ -4,7 +4,6 @@ import uuid
 import jwt
 import strawberry
 from fastapi import HTTPException, status
-from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from strawberry.types import Info
@@ -84,38 +83,6 @@ def get_user_by_token(session: Session, token: str) -> User:
         else:
             logger.error(f"Error getting user: {str(e)}")
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Unauthorized: {str(e)}")
-
-
-async def save_apple_user(info: Info, id_token: str, nonce: str) -> AuthPayload:
-    try:
-        apple_payload = TokenService.verify_apple_token(id_token, nonce)
-    except InvalidTokenError:
-        raise ValueError("Invalid Apple ID token")
-
-    apple_id = apple_payload["sub"]
-    email = apple_payload.get("email")
-
-    session: Session = info.context["session"]
-    user = session.query(User).filter(User.apple_id == apple_id).first()
-
-    if user is None:
-        user = User(apple_id=apple_id, email=email)
-        session.add(user)
-        session.commit()
-    elif email and user.email != email:
-        user.email = email
-        session.commit()
-
-    access_token_subject = AccessTokenSubject(
-        id=str(user.id),
-        email=user.email,
-        name=user.name,
-    )
-    # Create access and refresh tokens
-    access_token = TokenService.create_access_token(subject=access_token_subject)
-    refresh_token = TokenService.create_refresh_token(access_token_subject)
-
-    return AuthPayload(user_id=user.id, access_token=access_token, refresh_token=refresh_token)
 
 
 async def refresh_token(info: Info, refresh_token: str) -> AuthPayload:
