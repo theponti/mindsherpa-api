@@ -9,6 +9,7 @@ from strawberry.types import Info
 
 from src.data.chat import insert_message
 from src.data.models.chat import Message as MessageModel
+from src.data.models.user import User
 from src.services.sherpa import get_sherpa_response
 from src.utils.logger import logger
 
@@ -58,7 +59,8 @@ async def chat_messages(info: Info, chat_id: str) -> ChatMessagesResponse:
 
 
 async def send_chat_message(info: Info, chat_id: uuid.UUID, message: str) -> List[MessageOutput]:
-    if not info.context.get("user"):
+    user: User | None = info.context.get("user")
+    if not user:
         raise Exception("Unauthorized")
 
     profile_id: uuid.UUID = info.context.get("profile").id
@@ -70,7 +72,7 @@ async def send_chat_message(info: Info, chat_id: uuid.UUID, message: str) -> Lis
     )
 
     # Retrieve message from ChatGPT
-    sherpa_response = get_sherpa_response(session, message, chat_id, profile_id)
+    sherpa_response = get_sherpa_response(session, message, profile_id, user=user)
     if sherpa_response is None:
         raise Exception("No response from the model")
 

@@ -3,20 +3,17 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from src.data.models.chat import Chat, ChatState, Message
+from src.data.models.chat import Message
 
 
-def get_full_chat_history(session: Session, profile_id: UUID) -> List[Message]:
-    active_chat = (
-        session.query(Chat)
-        .filter(Chat.profile_id == profile_id)
-        .filter(Chat.state == ChatState.ACTIVE.value)
-        .first()
+def get_user_chat_messages(session: Session, profile_id: UUID) -> List[Message]:
+    messages = (
+        session.query(Message)
+        .filter(Message.profile_id == profile_id)
+        .order_by(Message.created_at.desc())
+        .all()
     )
-    if active_chat is None:
-        return []
 
-    messages = session.query(Message).filter(Message.chat_id == active_chat.id).all()
     return messages
 
 
