@@ -1,8 +1,9 @@
 import uuid
 from typing import Annotated, List, Optional, Required
 
-from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
+from langchain_core.runnables import RunnableSerializable
 from pydantic import BaseModel
 from pydantic.fields import Field
 from sqlalchemy.orm import Session
@@ -42,18 +43,6 @@ def process_user_input_with_openai(user_input: str) -> LLMFocusOutput:
     - LLMFocusOutput: List of focus items
     """
     try:
-        # prompt = get_prompt(AvailablePrompts.v4).format(user_input=)
-
-        # response = openai_service.openai_client.chat.completions.create(
-        #     model="gpt-4o-mini",
-        #     messages=[
-        #         {"role": "system", "content": prompt},
-        #         {"role": "user", "content": user_input}],
-        #     max_tokens=1500
-        # )
-
-        # llm_response = response.choices[0].message['content']
-        # structured_llm = openai_service.openai_chat.with_structured_output(LLMFocusOutput, method="json_mode")
         # 👇 Create output parser
         parser = JsonOutputParser(pydantic_object=LLMFocusOutput)
 
