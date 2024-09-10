@@ -4,21 +4,22 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    environment:
-      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/postgres"
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          ignore:
+            - .venv/
+        - action: rebuild
+          path: pyproject.toml
     ports:
       - "5678:5678"
       - "8002:8000"
     volumes:
       - .:/app
-      - /app/__pycache__/
-    command: uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
-    # command:
-    #   [
-    #     "sh",
-    #     "-c",
-    #     "python -m debugpy --wait-for-client --listen 0.0.0.0:5678 -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload -Xfrozen_modules=off",
-    #   ]
+      - /app/.venv
+    command: uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
     depends_on:
       - postgres
       - chroma

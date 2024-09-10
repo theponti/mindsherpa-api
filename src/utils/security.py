@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 
 import jwt
-import jwt.algorithms
 from pydantic import BaseModel
 
 from src.utils.config import settings

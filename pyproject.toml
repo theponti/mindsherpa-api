@@ -4,7 +4,26 @@ version = "0.1.0"
 description = "An API that enables clients to interact with the Mindsherpa platform."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "fastapi>=0.113.0",
+    "langchain>=0.2.16",
+    "langchain-community>=0.2.16",
+    "langchain-openai>=0.1.23",
+    "openai>=1.43.1",
+    "python-dotenv>=1.0.1",
+    "uvicorn>=0.30.6",
+    "strawberry-graphql[fastapi]>=0.239.2",
+    "pytest>=8.3.2",
+    "sqlalchemy>=2.0.34",
+    "psycopg2-binary>=2.9.9",
+    "pydantic-settings>=2.4.0",
+    "pyjwt>=2.9.0",
+    "groq>=0.11.0",
+    "langchain-groq>=0.1.9",
+    "supabase>=2.7.4",
+    "alembic>=1.13.2",
+    "pre-commit>=3.8.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -42,3 +61,6 @@ combine-as-imports = true
 force-wrap-aliases = true
 known-local-folder = ["src"]
 known-first-party = ["flux"]
+
+[tool.uv]
+dev-dependencies = ["ruff>=0.6.2", "fastapi-cli>=0.0.5"]

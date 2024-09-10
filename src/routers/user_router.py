@@ -4,7 +4,7 @@ from fastapi import APIRouter, status
 from fastapi.exceptions import HTTPException
 from pydantic import BaseModel
 
-from src.data.models.user import Profile, User
+from src.data.models.user import Profile, User, create_profile, create_user
 from src.utils.context import CurrentProfile, SessionDep
 
 user_router = APIRouter()
@@ -12,6 +12,8 @@ user_router = APIRouter()
 
 class CreateUserInput(BaseModel):
     email: str
+    name: str
+    user_id: str
 
 
 class ProfileOutput(BaseModel):
@@ -62,13 +64,10 @@ def create_user_and_profile(db: SessionDep, input: CreateUserInput) -> ProfileOu
     if user:
         profile = db.query(Profile).filter(Profile.user_id == user.id).first()
     else:
-        user = User(email=input.email)
-        db.add(user)
-        db.commit()
-
-        profile = Profile(user_id=user.id, provider="apple")
-        db.add(profile)
-        db.commit()
+        user = create_user(
+            session=db, user_id=input.user_id, email=input.email, name=input.name, provider="apple"
+        )
+        profile = create_profile(session=db, user_id=user.id, provider="apple")
 
     if not profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile does not exist")

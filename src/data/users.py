@@ -2,11 +2,9 @@ import json
 import uuid
 
 import jwt
-import strawberry
 from fastapi import HTTPException, status
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
-from strawberry.types import Info
 
 from src.data.models.user import (
     User,
@@ -21,21 +19,7 @@ from src.utils.logger import logger
 from src.utils.security import AccessTokenSubject, TokenService
 
 
-@strawberry.type
-class UserOutput:
-    id: str
-    email: str | None
-
-
-@strawberry.type
-class ProfileOutput:
-    id: int
-    full_name: str | None
-    user_id: str
-
-
-@strawberry.type
-class AuthPayload:
+class AuthPayload(BaseModel):
     user_id: uuid.UUID
     access_token: str
     refresh_token: str
@@ -85,11 +69,10 @@ def get_user_by_token(session: Session, token: str) -> User:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Unauthorized: {str(e)}")
 
 
-async def refresh_token(info: Info, refresh_token: str) -> AuthPayload:
+async def refresh_token(db: Session, refresh_token: str) -> AuthPayload:
     payload = TokenService.decode_access_token(refresh_token)
 
-    session: Session = info.context["session"]
-    user = session.query(User).filter(User.id == payload.sub.id).first()
+    user = db.query(User).filter(User.id == payload.sub.id).first()
 
     if user is None:
         raise ValueError("User not found")

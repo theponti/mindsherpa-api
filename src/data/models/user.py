@@ -93,10 +93,14 @@ Profile.contexts = relationship("Context", back_populates="profile")
 Profile.system_state = relationship("SystemState", back_populates="profile")
 
 
-def create_user(session: Session, user_id: str, email: str) -> User:
+def create_user(
+    session: Session, user_id: str, email: str, name: Optional[str] = None, provider: Optional[str] = None
+) -> User:
     user = User(
         id=user_id,
         email=email,
+        name=name,
+        provider=provider,
     )
     session.add(user)
     session.commit()

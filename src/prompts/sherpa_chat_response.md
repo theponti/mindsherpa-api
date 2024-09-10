@@ -28,14 +28,8 @@ Respond based on the chat history and adhere to these guidelines:
 
 {format_instructions}
 
-## User Context
+
+## User Content
+The following is information about the user and their goals:
 
 {user_context}
-
-## Chat History
-
-{chat_history}
-
-## User Input
-
-{user_input}

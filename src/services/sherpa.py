@@ -1,8 +1,14 @@
 import uuid
 from typing import Annotated, List, Optional, Required
 
-from langchain.prompts import PromptTemplate
+from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    PromptTemplate,
+    SystemMessagePromptTemplate,
+)
+from langchain_core.runnables import RunnablePassthrough
 from pydantic import BaseModel
 from pydantic.fields import Field
 from sqlalchemy.orm import Session
@@ -10,6 +16,7 @@ from sqlalchemy.orm import Session
 from src.data.context import get_user_context
 from src.data.models.chat import Message
 from src.data.models.focus import get_focus_by_profile_id
+from src.data.models.user import User
 from src.services import openai_service
 from src.services.groq_service import groq_chat
 from src.services.prompt_service import AvailablePrompts, get_prompt
@@ -42,18 +49,6 @@ def process_user_input_with_openai(user_input: str) -> LLMFocusOutput:
     - LLMFocusOutput: List of focus items
     """
     try:
-        # prompt = get_prompt(AvailablePrompts.v4).format(user_input=)
-
-        # response = openai_service.openai_client.chat.completions.create(
-        #     model="gpt-4o-mini",
-        #     messages=[
-        #         {"role": "system", "content": prompt},
-        #         {"role": "user", "content": user_input}],
-        #     max_tokens=1500
-        # )
-
-        # llm_response = response.choices[0].message['content']
-        # structured_llm = openai_service.openai_chat.with_structured_output(LLMFocusOutput, method="json_mode")
         # 👇 Create output parser
         parser = JsonOutputParser(pydantic_object=LLMFocusOutput)
 
@@ -136,29 +131,32 @@ class SherpaResponse(BaseModel):
 
 
 def get_sherpa_response(
-    session: Session, message: str, chat_id: uuid.UUID, profile_id: uuid.UUID
+    session: Session, message: str, profile_id: uuid.UUID, user: User
 ) -> SherpaResponse | None:
     try:
         system_prompt = get_prompt(AvailablePrompts.SherpaChatResponse)
         user_context = get_user_context(session, profile_id=profile_id)
 
-        # Create the LLM chain
         parser = JsonOutputParser(pydantic_object=SherpaResponse)
-        prompt_template = PromptTemplate(
-            template=system_prompt,
-            input_variables=["user_context", "chat_history"],
-            partial_variables={"format_instructions": parser.get_format_instructions()},
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(
+                    template=system_prompt,
+                    partial_variables={
+                        "format_instructions": parser.get_format_instructions(),
+                        "user_context": f"User's name: {user.name}\n\n" + "\n".join(user_context.focus_items),
+                    },
+                ),
+                ChatPromptTemplate.from_messages(
+                    [HumanMessage(content=message) for message in user_context.chat_history]
+                ),
+                ("human", "{user_input}"),
+            ]
         )
 
-        # Get the LLM response
-        chain = prompt_template | groq_chat
-        llm_response = chain.invoke(
-            {
-                "chat_history": "\n".join(user_context.chat_history),
-                "user_context": "\n".join(user_context.note_history),
-                "user_input": message,
-            }
-        )
+        chain = {"user_input": RunnablePassthrough()} | prompt | groq_chat
+
+        llm_response = chain.invoke({"user_input": message})
 
         logger.info("LLM Metadata", llm_response.response_metadata)
         if isinstance(llm_response.content, str):

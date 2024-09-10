@@ -7,6 +7,7 @@ from src.routers.chat import chat_router
 from src.routers.graphql import graphql_router
 from src.routers.notes import notes_router
 from src.routers.tasks import task_router
+from src.routers.user_intent import UserIntentRouter
 from src.routers.user_router import user_router
 
 # Create FastAPI app
@@ -27,6 +28,7 @@ app.include_router(graphql_router, prefix="/graphql")
 app.include_router(notes_router, prefix="/notes")
 app.include_router(task_router, prefix="/tasks")
 app.include_router(chat_router, prefix="/chat")
+app.include_router(UserIntentRouter)
 app.include_router(user_router, prefix="/user")
 
 

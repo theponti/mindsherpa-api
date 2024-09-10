@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from src.data.db import SessionLocal
 from src.data.models.user import Profile, User
-from src.resolvers.user_resolvers import get_user_by_token
+from src.data.users import get_user_by_token
 from src.utils.config import settings
 
 
