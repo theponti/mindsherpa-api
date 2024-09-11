@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated, List, Optional, Required
 
+import pydantic
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
@@ -14,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from src.data.context import get_user_context
 from src.data.models.chat import Message
-from src.data.models.focus import FocusItemBase, get_focus_by_profile_id
+from src.data.models.focus import FocusItemBase, FocusItemInput, get_focus_by_profile_id
 from src.data.models.user import User
 from src.services.groq_service import groq_chat
 from src.services.prompt_service import AvailablePrompts, get_prompt
@@ -38,7 +39,11 @@ class LLMFocusOutput(BaseModel):
     items: List[FocusItemBase]
 
 
-def process_user_input(user_input: str) -> LLMFocusOutput:
+class ProcessUserInputResponse(pydantic.BaseModel):
+    items: List[FocusItemInput]
+
+
+def process_user_input(user_input: str) -> ProcessUserInputResponse:
     """
     Process user input and return a list of focus items
 
@@ -71,7 +76,7 @@ def process_user_input(user_input: str) -> LLMFocusOutput:
             {"user_input": f"Current Date: {datetime.now().strftime('%A %B %d, %Y')}\n\n{user_input}"}
         )
 
-        return LLMFocusOutput(items=llm_response["items"])
+        return ProcessUserInputResponse(items=[FocusItemInput(**item) for item in llm_response["items"]])
     except Exception as e:
         logger.error(f"Error processing user input: {e}")
         raise e
@@ -135,7 +140,7 @@ def get_chat_summary(
     chat_id: Annotated[uuid.UUID, Required],
     profile_id: Annotated[uuid.UUID, Required],
     session: Annotated[Session, Required],
-) -> LLMFocusOutput:
+) -> ProcessUserInputResponse:
     messages = session.query(Message).filter(Message.chat_id == chat_id).all()
     existing_focus_items = get_focus_by_profile_id(profile_id=profile_id, session=session)
     transcript = """

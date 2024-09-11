@@ -1,14 +1,13 @@
 import base64
 import os
 import tempfile
-from typing import Any, Dict, List, Optional
+from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints, ValidationError
 
 from src.data.focus import create_focus_items
-from src.data.models.focus import Focus, FocusItem, FocusItemBase, FocusState
-from src.data.notes import create_note
+from src.data.models.focus import Focus, FocusItem, FocusItemInput, FocusState
 from src.services.openai_service import openai_client
 from src.services.sherpa import process_user_input
 from src.utils.context import CurrentProfile, SessionDep
@@ -49,18 +48,20 @@ async def get_focus_items(profile: CurrentProfile, db: SessionDep, category: Opt
 
 
 class CreateFocusItemsPayload(BaseModel):
-    content: str
+    content: Annotated[str, StringConstraints(min_length=1)]
 
 
 class CreateFocusItemsResponse(BaseModel):
-    items: List[Dict[str, Any]]
+    items: List[FocusItemInput]
 
 
 @notes_router.post("/text")
-async def create_focus_items_from_text_route(profile: CurrentProfile, input: CreateFocusItemsPayload):
+async def create_focus_items_from_text_route(
+    profile: CurrentProfile, input: CreateFocusItemsPayload
+) -> CreateFocusItemsResponse:
     try:
         focus_items = process_user_input(user_input=input.content)
-        return focus_items
+        return CreateFocusItemsResponse(items=focus_items.items)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -75,9 +76,9 @@ class AudioUpload(BaseModel):
 
 
 @notes_router.post("/voice")
-async def upload_voice_note(audio: AudioUpload, db: SessionDep, profile: CurrentProfile):
-    profile_id = profile.id
-
+async def create_focus_items_from_audio_route(
+    audio: AudioUpload, profile: CurrentProfile
+) -> CreateFocusItemsResponse:
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_file_path = os.path.join(temp_dir, "temp_audio.m4a")
@@ -92,19 +93,9 @@ async def upload_voice_note(audio: AudioUpload, db: SessionDep, profile: Current
                     model="whisper-1", file=audio_file, response_format="text"
                 )
 
-        formatted_transcription = str(transcription)
-        note = create_note(db, formatted_transcription, profile_id)
-        if not note:
-            return False
+        focus_items = process_user_input(user_input=str(transcription))
 
-        focus_items = process_user_input(user_input=formatted_transcription)
-
-        return CreateNoteOutput(
-            id=note.id,
-            content=note.content,
-            created_at=note.created_at,
-            focus_items=focus_items.items,
-        )
+        return CreateFocusItemsResponse(items=focus_items.items)
 
     except Exception as e:
         error_message = str(e)
@@ -125,36 +116,27 @@ async def upload_voice_note(audio: AudioUpload, db: SessionDep, profile: Current
 
 
 class CreateFocusItemInput(BaseModel):
-    items: List[FocusItemBase]
+    items: List[FocusItemInput]
 
 
 @notes_router.post("/focus")
 async def create_focus_item_route(
     input: CreateFocusItemInput, db: SessionDep, profile: CurrentProfile
-) -> List[FocusItem] | bool:
-    created_items = create_focus_items(
-        focus_items=input.items,
-        profile_id=profile.id,
-        session=db,
-    )
-
-    return [
-        FocusItem(
-            id=item.id,
-            text=item.text,
-            type=item.type,
-            task_size=item.task_size,
-            category=item.category,
-            priority=item.priority,
-            profile_id=item.profile_id,
-            sentiment=item.sentiment,
-            state=item.state,
-            due_date=item.due_date,
-            created_at=item.created_at,
-            updated_at=item.updated_at,
+) -> List[FocusItem]:
+    try:
+        created_items = create_focus_items(
+            focus_items=input.items,
+            profile_id=profile.id,
+            session=db,
         )
-        for item in created_items
-    ]
+
+        return [item.to_model() for item in created_items]
+    except Exception as e:
+        if isinstance(e, ValidationError):
+            print(e.errors())
+            raise HTTPException(status_code=422, detail=e.errors())
+        else:
+            raise HTTPException(status_code=500, detail=str(e))
 
 
 @notes_router.delete("/focus/{id}")
