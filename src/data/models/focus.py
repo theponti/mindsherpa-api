@@ -1,10 +1,10 @@
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Optional
+from typing import Optional, Union
 
 import strawberry
-from pydantic import BaseModel
+from langchain.pydantic_v1 import BaseModel, Field
 from sqlalchemy import UUID, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, Session, mapped_column
 from sqlalchemy.types import DateTime
@@ -20,33 +20,79 @@ class FocusState(Enum):
     deleted = "deleted"
 
 
-class FocusItem(BaseModel):
-    id: int
-    category: str
-    due_date: Optional[date]
-    priority: int
-    profile_id: uuid.UUID
-    sentiment: str
-    state: FocusState
-    task_size: str
-    text: str
-    type: str
-    created_at: datetime
-    updated_at: datetime
+class ItemType(str, Enum):
+    event = "event"
+    task = "task"
+    goal = "goal"
+    reminder = "reminder"
+    note = "note"
+    feeling = "feeling"
+    request = "request"
+    question = "question"
 
 
-@strawberry.type
-class FocusOutputItem:
-    id: int
-    category: str
-    due_date: Optional[date]
-    priority: int
-    profile_id: uuid.UUID
-    sentiment: str
-    state: FocusState
-    task_size: str
+class TaskSize(str, Enum):
+    small = "small"
+    medium = "medium"
+    large = "large"
+    epic = "epic"
+
+
+class Category(str, Enum):
+    career = "career"
+    personal_development = "personal_development"
+    physical_health = "physical_health"
+    mental_health = "mental_health"
+    finance = "finance"
+    education = "education"
+    relationships = "relationships"
+    home = "home"
+    shopping = "shopping"
+    interests = "interests"
+    adventure = "adventure"
+    technology = "technology"
+    spirituality = "spirituality"
+    productivity = "productivity"
+    creativity = "creativity"
+    culture = "culture"
+    legal = "legal"
+    events = "events"
+    projects = "projects"
+
+
+class Sentiment(str, Enum):
+    positive = "positive"
+    neutral = "neutral"
+    negative = "negative"
+
+
+class DueDate(BaseModel):
+    month: Union[str, int]
+    day: Union[str, int]
+    year: Union[str, int]
+    time: Union[str, int]
+
+
+class FocusItemBase(BaseModel):
+    type: ItemType
+    task_size: TaskSize
     text: str
-    type: str
+    category: Category = Field(
+        description="Shopping, grocery shopping, fashion, beauty, and personal style. Also includes items related to buying and selling.",
+    )
+    priority: int = Field(ge=1, le=5)
+    sentiment: Sentiment
+    due_date: Optional[str] = Field(
+        None,
+        description="The deadline for completing the item in YYYY-MM-DDTHH:MM format. Example: due_date: 2023-01-01T12:00",
+    )
+
+
+class FocusItem(FocusItemBase):
+    id: int
+    due_date: Optional[str]
+    profile_id: uuid.UUID
+    state: FocusState
     created_at: datetime
     updated_at: datetime
 
@@ -86,22 +132,6 @@ class Focus(Base):
             "updated_at": self.updated_at,
         }
 
-    def to_output_item(self) -> FocusOutputItem:
-        return FocusOutputItem(
-            id=self.id,
-            text=self.text,
-            type=self.type,
-            task_size=self.task_size,
-            category=self.category,
-            priority=self.priority,
-            profile_id=self.profile_id,
-            sentiment=self.sentiment,
-            state=self.state,
-            due_date=self.due_date,
-            created_at=self.created_at,
-            updated_at=self.updated_at,
-        )
-
 
 def get_focus_by_profile_id(session: Session, profile_id: uuid.UUID):
     return session.query(Focus).filter(Focus.profile_id == profile_id).all()
@@ -121,7 +151,7 @@ def create_focus(session: Session, text: str, profile_id: uuid.UUID) -> Focus:
 
 def complete_focus(session: Session, focus_id: int) -> Focus:
     focus = get_focus_by_id(session, focus_id)
-    focus.state = FocusState.completed.value
+    focus.state = FocusState.completed
     session.commit()
     session.flush()
     return focus

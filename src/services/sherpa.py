@@ -1,27 +1,24 @@
 import uuid
+from datetime import datetime
 from typing import Annotated, List, Optional, Required
 
+from langchain.pydantic_v1 import BaseModel, Field
 from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import (
     ChatPromptTemplate,
-    PromptTemplate,
     SystemMessagePromptTemplate,
 )
 from langchain_core.runnables import RunnablePassthrough
-from pydantic import BaseModel
-from pydantic.fields import Field
 from sqlalchemy.orm import Session
 
 from src.data.context import get_user_context
 from src.data.models.chat import Message
-from src.data.models.focus import get_focus_by_profile_id
+from src.data.models.focus import FocusItemBase, get_focus_by_profile_id
 from src.data.models.user import User
 from src.services.groq_service import groq_chat
 from src.services.prompt_service import AvailablePrompts, get_prompt
-from src.types.llm_output_types import LLMFocusOutput
 from src.utils.generation_statistics import GenerationStatistics
-from src.utils.hotdate import convert_due_date
 from src.utils.logger import logger
 
 
@@ -37,6 +34,10 @@ def log_usage(model: str, usage):
     logger.info("focus_stats", statistics_to_return.get_stats())
 
 
+class LLMFocusOutput(BaseModel):
+    items: List[FocusItemBase]
+
+
 def process_user_input(user_input: str) -> LLMFocusOutput:
     """
     Process user input and return a list of focus items
@@ -48,30 +49,30 @@ def process_user_input(user_input: str) -> LLMFocusOutput:
     - LLMFocusOutput: List of focus items
     """
     try:
-        # 👇 Create output parser
+        # 👇 Create LLM output parser
         parser = JsonOutputParser(pydantic_object=LLMFocusOutput)
 
-        # 👇 Create prompt template
-        prompt_template = PromptTemplate(
-            template=get_prompt(AvailablePrompts.v4),
-            input_variables=["user_input"],
-            partial_variables={"format_instructions": parser.get_format_instructions()},
+        # 👇 Create LLM prompt
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(
+                    template=get_prompt(AvailablePrompts.v4),
+                    partial_variables={"format_instructions": parser.get_format_instructions()},
+                ),
+                ("human", "{user_input}"),
+            ]
         )
 
         # 👇 Create the LLM chain
-        chain = prompt_template | groq_chat | parser
+        chain = {"user_input": RunnablePassthrough()} | prompt | groq_chat | parser
 
         # 👇 Get the LLM response
-        llm_response = chain.invoke({"user_input": user_input})
+        llm_response = chain.invoke(
+            {"user_input": f"Current Date: {datetime.now().strftime('%A %B %d, %Y')}\n\n{user_input}"}
+        )
 
-        # 👇 Convert due dates use `hotdate`
-        with_due_dates = []
-        for item in llm_response["items"]:
-            if item["due_date"] and item["due_date"] != "None":
-                item["due_date"] = convert_due_date(item["due_date"])
-            with_due_dates.append(item)
-
-        return LLMFocusOutput(items=with_due_dates)
+        print(llm_response)
+        return LLMFocusOutput(items=llm_response["items"])
     except Exception as e:
         logger.error(f"Error processing user input: {e}")
         raise e
@@ -90,9 +91,7 @@ class SherpaResponse(BaseModel):
     metadata: Optional[SherpaResponseMetadata] = None
 
 
-def get_sherpa_response(
-    session: Session, message: str, profile_id: uuid.UUID, user: User
-) -> SherpaResponse | None:
+def get_sherpa_response(session: Session, message: str, profile_id: uuid.UUID, user: User) -> SherpaResponse:
     try:
         system_prompt = get_prompt(AvailablePrompts.SherpaChatResponse)
         user_context = get_user_context(session, profile_id=profile_id)
@@ -137,7 +136,7 @@ def get_chat_summary(
     chat_id: Annotated[uuid.UUID, Required],
     profile_id: Annotated[uuid.UUID, Required],
     session: Annotated[Session, Required],
-) -> LLMFocusOutput | None:
+) -> LLMFocusOutput:
     messages = session.query(Message).filter(Message.chat_id == chat_id).all()
     existing_focus_items = get_focus_by_profile_id(profile_id=profile_id, session=session)
     transcript = """

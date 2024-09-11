@@ -1,39 +1,25 @@
 import base64
-import datetime
 import json
 import os
 import tempfile
 from typing import List, Optional
-from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from src.data.focus import create_focus_items, create_note
-from src.data.models.focus import Focus, FocusItem, FocusOutputItem, FocusState
+from src.data.focus import create_focus_items
+from src.data.models.focus import Focus, FocusItem, FocusItemInput, FocusState
 from src.routers.user_intent.user_intent_service import get_user_intent
 from src.services.openai_service import openai_client
 from src.services.sherpa import process_user_input
-from src.types.llm_output_types import LLMFocusItem, LLMFocusOutput
 from src.utils.context import CurrentProfile, SessionDep
 from src.utils.logger import logger
 
 notes_router = APIRouter()
 
 
-class CreateNoteInput(BaseModel):
-    content: str
-
-
-class CreateNoteOutput(BaseModel):
-    id: UUID
-    content: str
-    created_at: datetime.datetime
-    focus_items: List[LLMFocusItem]
-
-
 class FocusOutput(BaseModel):
-    items: List[FocusOutputItem]
+    items: List[FocusItem]
 
 
 @notes_router.get("/focus")
@@ -44,7 +30,12 @@ async def get_focus_items(profile: CurrentProfile, db: SessionDep, category: Opt
     profile_id = profile.id
 
     query = db.query(Focus).filter(
-        Focus.profile_id == profile_id, Focus.state.notin_([FocusState.completed.value])
+        Focus.profile_id == profile_id,
+        Focus.state.notin_(
+            [
+                FocusState.completed.value,
+            ]
+        ),
     )
 
     # Apply category filter if provided
@@ -63,8 +54,18 @@ async def get_focus_items(profile: CurrentProfile, db: SessionDep, category: Opt
     return {"items": focus_items}
 
 
+class CreateFocusItemsPayload(BaseModel):
+    content: str
+
+
+class CreateFocusItemsResponse(BaseModel):
+    items: List[FocusItemInput]
+
+
 @notes_router.post("/text")
-async def create_text_note_route(profile: CurrentProfile, input: CreateNoteInput):
+async def create_text_note_route(
+    profile: CurrentProfile, input: CreateFocusItemsPayload
+) -> CreateFocusItemsResponse:
     try:
         function_calls = get_user_intent(input.content)
 
@@ -72,16 +73,16 @@ async def create_text_note_route(profile: CurrentProfile, input: CreateNoteInput
             filter(lambda call: call.function_name == "create_tasks", function_calls.intents)
         )
 
-        focus_items: List[LLMFocusItem] = []
+        focus_items: List[FocusItemInput] = []
         for call in create_tasks_calls:
             if isinstance(call.parameters, list):
                 for param in call.parameters:
                     print(json.dumps(param, indent=4))
-                    focus_items.append(LLMFocusItem(**param))  # type: ignore
+                    focus_items.append(FocusItemInput(**param))  # type: ignore
 
         print(json.dumps([item.json() for item in focus_items], indent=4))
         try:
-            results = LLMFocusOutput(items=focus_items)
+            results = CreateFocusItemsResponse(items=focus_items)
             return results
         except Exception as e:
             print(e)
@@ -90,8 +91,8 @@ async def create_text_note_route(profile: CurrentProfile, input: CreateNoteInput
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
-
-        logger.error(f"Error creating note: {e}")
+        print(e)
+        logger.error(f"Error creating focus items: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
@@ -101,9 +102,7 @@ class AudioUpload(BaseModel):
 
 
 @notes_router.post("/voice")
-async def upload_voice_note(
-    audio: AudioUpload, db: SessionDep, profile: CurrentProfile
-) -> CreateNoteOutput | bool:
+async def upload_voice_note(audio: AudioUpload, db: SessionDep, profile: CurrentProfile):
     profile_id = profile.id
 
     try:
@@ -120,19 +119,9 @@ async def upload_voice_note(
                     model="whisper-1", file=audio_file, response_format="text"
                 )
 
-        formatted_transcription = str(transcription)
-        note = create_note(db, formatted_transcription, profile_id)
-        if not note:
-            return False
+        focus_items = process_user_input(user_input=str(transcription))
 
-        focus_items = process_user_input(user_input=formatted_transcription)
-
-        return CreateNoteOutput(
-            id=note.id,
-            content=note.content,
-            created_at=note.created_at,
-            focus_items=focus_items.items,
-        )
+        return focus_items.items
 
     except Exception as e:
         error_message = str(e)
@@ -153,7 +142,7 @@ async def upload_voice_note(
 
 
 class CreateFocusItemInput(BaseModel):
-    items: List[LLMFocusItem]
+    items: List[FocusItemInput]
 
 
 @notes_router.post("/focus")
@@ -166,23 +155,7 @@ async def create_focus_item_route(
         session=db,
     )
 
-    return [
-        FocusItem(
-            id=item.id,
-            text=item.text,
-            type=item.type,
-            task_size=item.task_size,
-            category=item.category,
-            priority=item.priority,
-            profile_id=item.profile_id,
-            sentiment=item.sentiment,
-            state=item.state,
-            due_date=item.due_date,
-            created_at=item.created_at,
-            updated_at=item.updated_at,
-        )
-        for item in created_items
-    ]
+    return [item.to_model() for item in created_items]
 
 
 @notes_router.delete("/focus/{id}")

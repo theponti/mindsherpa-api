@@ -6,6 +6,17 @@ from sqlalchemy.orm import Session
 from src.data.models import Note
 
 
+def create_note(session: Session, content: str, profile_id: uuid.UUID) -> Note | None:
+    try:
+        note = Note(content=content, profile_id=profile_id)
+        session.add(note)
+        session.commit()
+        return note
+    except Exception as e:
+        print(f"Error saving note: {e}")
+        return None
+
+
 def get_user_notes(session: Session, profile_id: uuid.UUID) -> List[Note]:
     notes = session.query(Note).filter(Note.profile_id == profile_id).all()
 
