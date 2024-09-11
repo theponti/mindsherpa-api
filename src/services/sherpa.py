@@ -71,7 +71,6 @@ def process_user_input(user_input: str) -> LLMFocusOutput:
             {"user_input": f"Current Date: {datetime.now().strftime('%A %B %d, %Y')}\n\n{user_input}"}
         )
 
-        print(llm_response)
         return LLMFocusOutput(items=llm_response["items"])
     except Exception as e:
         logger.error(f"Error processing user input: {e}")
