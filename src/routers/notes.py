@@ -1,37 +1,24 @@
 import base64
-import datetime
 import os
 import tempfile
-from typing import List, Optional
-from uuid import UUID
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from src.data.focus import create_focus_items, create_note
-from src.data.models.focus import Focus, FocusItem, FocusOutputItem, FocusState
+from src.data.focus import create_focus_items
+from src.data.models.focus import Focus, FocusItem, FocusItemBase, FocusState
+from src.data.notes import create_note
 from src.services.openai_service import openai_client
-from src.services.sherpa import process_user_input, process_user_input_with_openai
-from src.types.llm_output_types import LLMFocusItem
+from src.services.sherpa import process_user_input
 from src.utils.context import CurrentProfile, SessionDep
 from src.utils.logger import logger
 
 notes_router = APIRouter()
 
 
-class CreateNoteInput(BaseModel):
-    content: str
-
-
-class CreateNoteOutput(BaseModel):
-    id: UUID
-    content: str
-    created_at: datetime.datetime
-    focus_items: List[LLMFocusItem]
-
-
 class FocusOutput(BaseModel):
-    items: List[FocusOutputItem]
+    items: List[FocusItem]
 
 
 @notes_router.get("/focus")
@@ -61,29 +48,24 @@ async def get_focus_items(profile: CurrentProfile, db: SessionDep, category: Opt
     return {"items": focus_items}
 
 
+class CreateFocusItemsPayload(BaseModel):
+    content: str
+
+
+class CreateFocusItemsResponse(BaseModel):
+    items: List[Dict[str, Any]]
+
+
 @notes_router.post("/text")
-async def create_text_note_route(
-    db: SessionDep, profile: CurrentProfile, input: CreateNoteInput
-) -> CreateNoteOutput | bool:
-    profile_id = profile.id
+async def create_focus_items_from_text_route(profile: CurrentProfile, input: CreateFocusItemsPayload):
     try:
-        note = create_note(db, input.content, profile_id)
-        if not note:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Note not found")
-
-        focus_items = process_user_input_with_openai(user_input=note.content)
-
-        return CreateNoteOutput(
-            id=note.id,
-            content=note.content,
-            created_at=note.created_at,
-            focus_items=focus_items.items,
-        )
+        focus_items = process_user_input(user_input=input.content)
+        return focus_items
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
-
-        logger.error(f"Error creating note: {e}")
+        print(e)
+        logger.error(f"Error creating focus items: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
@@ -93,9 +75,7 @@ class AudioUpload(BaseModel):
 
 
 @notes_router.post("/voice")
-async def upload_voice_note(
-    audio: AudioUpload, db: SessionDep, profile: CurrentProfile
-) -> CreateNoteOutput | bool:
+async def upload_voice_note(audio: AudioUpload, db: SessionDep, profile: CurrentProfile):
     profile_id = profile.id
 
     try:
@@ -145,7 +125,7 @@ async def upload_voice_note(
 
 
 class CreateFocusItemInput(BaseModel):
-    items: List[LLMFocusItem]
+    items: List[FocusItemBase]
 
 
 @notes_router.post("/focus")

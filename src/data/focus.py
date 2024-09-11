@@ -3,14 +3,11 @@ from typing import List
 
 from sqlalchemy.orm import Session
 
-from src.data.models.focus import Focus
-from src.data.models.note import Note
-from src.services.sherpa import process_user_input
-from src.types.llm_output_types import LLMFocusItem
+from src.data.models.focus import Focus, FocusItemBase
 
 
 def create_focus_items(
-    focus_items: List[LLMFocusItem], profile_id: uuid.UUID, session: Session
+    focus_items: List[FocusItemBase], profile_id: uuid.UUID, session: Session
 ) -> List[Focus]:
     try:
         created_items = [
@@ -33,28 +30,3 @@ def create_focus_items(
     except Exception as e:
         print(f"Error creating focus items: {e}")
         return []
-
-
-def create_focus_from_text(text: str, profile_id: uuid.UUID, session: Session) -> List[Focus]:
-    try:
-        focus_items = process_user_input(user_input=text)
-        created_items = create_focus_items(focus_items.items, profile_id, session)
-        return created_items
-    except Exception as e:
-        print(f"Error creating focus items: {e}")
-        return []
-
-
-def create_note(session: Session, content: str, profile_id: uuid.UUID) -> Note | None:
-    try:
-        note = Note(content=content, profile_id=profile_id)
-        session.add(note)
-        session.commit()
-        return note
-    except Exception as e:
-        print(f"Error creating note: {e}")
-        return None
-
-
-def get_user_notes(session: Session, profile_id: str) -> List[Note]:
-    return session.query(Note).filter(Note.profile_id == profile_id).all()
