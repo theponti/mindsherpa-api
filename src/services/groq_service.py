@@ -12,7 +12,7 @@ groq_client = groq.Groq()
 groq_chat = ChatGroq(
     model=llama31_70b,
     max_retries=8000,
-    temperature=0.3,
+    temperature=0,
     stop_sequences="###",
     verbose=True,
 )

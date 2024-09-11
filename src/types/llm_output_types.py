@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import List, Optional, Union
 
-from pydantic import BaseModel, Field
+from langchain.pydantic_v1 import BaseModel, Field
 
 
 class ItemType(str, Enum):
@@ -58,15 +58,15 @@ class DueDate(BaseModel):
 
 
 class LLMFocusItem(BaseModel):
-    type: ItemType
-    task_size: TaskSize
-    text: str
+    type: ItemType = Field(description="Event, task, goal, reminder, note, feeling, request, question")
+    task_size: TaskSize = Field(description="Small, medium, large, epic")
+    text: str = Field(description="The description of the item")
     category: Category = Field(
         description="Shopping, grocery shopping, fashion, beauty, and personal style. Also includes items related to buying and selling.",
     )
-    priority: int = Field(ge=1, le=5)
-    sentiment: Sentiment
-    due_date: Optional[str]
+    priority: int = Field(ge=1, le=5, description="Important, medium, low, optional")
+    sentiment: Sentiment = Field(description="Positive, neutral, negative")
+    due_date: Optional[str] = Field(None, description="The optional due date for the task")
 
 
 class LLMFocusOutput(BaseModel):

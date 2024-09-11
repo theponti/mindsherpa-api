@@ -10,31 +10,24 @@ from typing_extensions import Dict
 
 from src.services.file_service import get_file_contents
 from src.services.groq_service import groq_chat
+from src.types.llm_output_types import LLMFocusItem
 
 
 class Intent(BaseModel):
     function_name: str = Field(description="The name of the function to call")
-    parameters: Dict[str, Any] = Field(description="The parameters to pass to the function")
+    parameters: List[Dict[str, Any]] | Dict[str, Any] = Field(
+        description="The parameters to pass to the function"
+    )
 
 
 class Intents(BaseModel):
     intents: List[Intent]
 
 
-class Task(BaseModel):
-    task_name: str = Field(..., description="The name or description of the task")
-    due_date: Optional[datetime] = Field(None, description="The optional due date for the task")
-    related_tasks: Optional[List[str]] = Field(None, description="The name of the related tasks")
-
-
-class CreateTasksParameters(BaseModel):
-    tasks: List[Task] = Field(..., description="An array of tasks to be added to the list")
-
-
 class CreateTasksFunction(BaseModel):
     name: str = Field("create_tasks", description="Create a new list of tasks")
     description: str = Field("Create a new list of tasks")
-    parameters: CreateTasksParameters
+    parameters: List[LLMFocusItem] = Field(..., description="An array of tasks to be added to the list")
 
 
 class SearchTasksParameters(BaseModel):
@@ -72,28 +65,94 @@ class EditTaskFunction(BaseModel):
 
 user_intent_examples = [
     {
+        "input": "I have to go to the grocery store and buy milk.",
+        "output": json.dumps(
+            [
+                {
+                    "name": "create_tasks",
+                    "parameters": [
+                        {
+                            "name": "Go to the grocery store",
+                            "type": "task",
+                            "task_size": "small",
+                            "text": "Go to the grocery store",
+                            "category": "shopping",
+                            "priority": 1,
+                            "sentiment": "neutral",
+                            "due_date": None,
+                        },
+                        {
+                            "type": "task",
+                            "task_size": "small",
+                            "text": "Buy milk",
+                            "category": "shopping",
+                            "priority": 1,
+                            "sentiment": "neutral",
+                            "due_date": None,
+                        },
+                    ],
+                }
+            ]
+        ),
+    },
+    {
+        "input": "Remind me to call mom tomorrow.",
+        "output": json.dumps(
+            [
+                {
+                    "name": "create_tasks",
+                    "parameters": [
+                        {
+                            "type": "task",
+                            "task_size": "small",
+                            "text": "Call mom",
+                            "category": "personal_development",
+                            "priority": 1,
+                            "sentiment": "neutral",
+                            "due_date": "2024-07-24",
+                        }
+                    ],
+                }
+            ]
+        ),
+    },
+    {
         "input": "I have to go to the grocery store and buy milk, email my boss, and check my email for updates.",
         "output": json.dumps(
             [
                 {
                     "name": "create_tasks",
-                    "parameters": {
-                        "tasks": [
-                            {"task_name": "Buy groceries"},
-                            {"task_name": "Finish report", "due_date": "2024-07-24"},
-                        ]
-                    },
+                    "parameters": [
+                        {
+                            "type": "task",
+                            "task_size": "small",
+                            "text": "Buy groceries",
+                            "category": "shopping",
+                            "priority": 1,
+                            "sentiment": "neutral",
+                            "due_date": None,
+                        },
+                        {
+                            "type": "task",
+                            "task_size": "small",
+                            "text": "Finish report",
+                            "category": "personal_development",
+                            "priority": 1,
+                            "sentiment": "neutral",
+                            "due_date": "2024-07-24",
+                        },
+                    ],
                 },
                 {"name": "search_tasks", "parameters": {"keyword": "email"}},
             ]
         ),
     },
     {
-        "input": "Who I need to do today?",
-        "output": json.dumps([{"name": "search_tasks", "parameters": {"due_before": "2024-07-24"}}]),
+        "input": "What do I need to do today?",
+        "output": json.dumps([{"name": "search_tasks", "parameters": {"due_on": "2024-07-24"}}]),
     },
     {
-        "input": "Current Date: 2024-07-24 \n What tasks are due this week?",
+        "input": "What tasks are due this week?",
         "output": json.dumps([{"name": "search_tasks", "parameters": {"due_before": "2024-07-31"}}]),
     },
     {
@@ -105,58 +164,29 @@ user_intent_examples = [
         "output": json.dumps([{"name": "search_tasks", "parameters": {"keyword": "dentist"}}]),
     },
     {
-        "input": "Remind me to call mom tomorrow.",
-        "output": json.dumps(
-            [
-                {
-                    "name": "create_tasks",
-                    "parameters": {"tasks": [{"task_name": "Call mom", "due_date": "2024-07-24"}]},
-                }
-            ]
-        ),
-    },
-    {
         "input": "Change the due date of my report to Friday.",
         "output": json.dumps(
-            [{"name": "edit_task", "parameters": {"task_query": "report_id", "new_due_date": "2024-07-24"}}]
+            [{"name": "edit_task", "parameters": {"task_query": "report", "new_due_date": "2024-07-24"}}]
         ),
     },
     {
         "input": "Mark the groceries as done.",
         "output": json.dumps(
-            [{"name": "edit_task", "parameters": {"task_id": "groceries_id", "new_status": "completed"}}]
-        ),
-    },
-    {
-        "input": "I have to go to the grocery store and buy milk.",
-        "output": json.dumps(
-            [
-                {
-                    "name": "create_tasks",
-                    "parameters": {
-                        "tasks": [
-                            {"task_name": "Go to the grocery store"},
-                            {"task_name": "Buy milk", "related_tasks": ["Go to the grocery store"]},
-                        ]
-                    },
-                }
-            ]
+            [{"name": "edit_task", "parameters": {"task_query": "groceries", "new_status": "completed"}}]
         ),
     },
 ]
 
 
-system_prompt = get_file_contents("src/routers/user_intent/user_intent_prompt.md")
-
-
 def get_user_intent(user_input: Annotated[str, Form()]) -> Intents:
-    groq_chat.bind_tools(
-        [
-            CreateTasksFunction,
-            SearchTasksFunction,
-            EditTaskFunction,
-        ]
-    )
+    system_prompt = get_file_contents("src/routers/user_intent/user_intent_prompt.md")
+    # groq_chat.bind_tools(
+    #     [
+    #         CreateTasksFunction,
+    #         SearchTasksFunction,
+    #         EditTaskFunction,
+    #     ]
+    # )
 
     structured_llm = groq_chat.with_structured_output(Intents)
 
@@ -193,3 +223,17 @@ def get_user_intent(user_input: Annotated[str, Form()]) -> Intents:
         return Intents(intents=[])
 
     return Intents(intents=intents)
+
+
+def group_intents(intents: List[Intent]) -> List[Intent]:
+    grouped_intents = {}
+    for intent in intents:
+        if intent.function_name not in grouped_intents:
+            grouped_intents[intent.function_name] = []
+        grouped_intents[intent.function_name].append(intent.parameters)
+
+    result = []
+    for intent_group in grouped_intents.keys():
+        result.append({"function_name": intent_group, "parameters": grouped_intents[intent_group]})
+
+    return result

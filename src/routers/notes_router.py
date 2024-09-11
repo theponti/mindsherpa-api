@@ -1,18 +1,20 @@
 import base64
 import datetime
+import json
 import os
 import tempfile
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from src.data.focus import create_focus_items, create_note
 from src.data.models.focus import Focus, FocusItem, FocusOutputItem, FocusState
+from src.routers.user_intent.user_intent_service import get_user_intent
 from src.services.openai_service import openai_client
-from src.services.sherpa import process_user_input, process_user_input_with_openai
-from src.types.llm_output_types import LLMFocusItem
+from src.services.sherpa import process_user_input
+from src.types.llm_output_types import LLMFocusItem, LLMFocusOutput
 from src.utils.context import CurrentProfile, SessionDep
 from src.utils.logger import logger
 
@@ -62,23 +64,29 @@ async def get_focus_items(profile: CurrentProfile, db: SessionDep, category: Opt
 
 
 @notes_router.post("/text")
-async def create_text_note_route(
-    db: SessionDep, profile: CurrentProfile, input: CreateNoteInput
-) -> CreateNoteOutput | bool:
-    profile_id = profile.id
+async def create_text_note_route(profile: CurrentProfile, input: CreateNoteInput):
     try:
-        note = create_note(db, input.content, profile_id)
-        if not note:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Note not found")
+        function_calls = get_user_intent(input.content)
 
-        focus_items = process_user_input_with_openai(user_input=note.content)
-
-        return CreateNoteOutput(
-            id=note.id,
-            content=note.content,
-            created_at=note.created_at,
-            focus_items=focus_items.items,
+        create_tasks_calls = list(
+            filter(lambda call: call.function_name == "create_tasks", function_calls.intents)
         )
+
+        focus_items: List[LLMFocusItem] = []
+        for call in create_tasks_calls:
+            if isinstance(call.parameters, list):
+                for param in call.parameters:
+                    print(json.dumps(param, indent=4))
+                    focus_items.append(LLMFocusItem(**param))  # type: ignore
+
+        print(json.dumps([item.json() for item in focus_items], indent=4))
+        try:
+            results = LLMFocusOutput(items=focus_items)
+            return results
+        except Exception as e:
+            print(e)
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

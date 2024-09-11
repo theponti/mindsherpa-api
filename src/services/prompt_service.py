@@ -9,7 +9,6 @@ class AvailablePrompts(Enum):
     v2 = "user_input_formatter_v2.md"
     v3 = "user_input_formatter_v3.md"
     v4 = "user_input_formatter_v4.md"
-    user_intent = "user_intent.md"
 
 
 def get_prompt(prompt: AvailablePrompts):
