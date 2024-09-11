@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, status
+from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
 
 from src.routers.ai_router import ai_router
 from src.routers.chat import chat_router
@@ -30,6 +32,24 @@ app.include_router(task_router, prefix="/tasks")
 app.include_router(chat_router, prefix="/chat")
 app.include_router(UserIntentRouter)
 app.include_router(user_router, prefix="/user")
+
+
+@app.exception_handler(ResponseValidationError)
+async def response_validation_exception_handler(request, exc):
+    content = {
+        "detail": exc.errors(),
+    }
+    print(content)
+    return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content=content)
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(request, exc):
+    content = {
+        "detail": exc.errors(),
+    }
+    print(content)
+    return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content=content)
 
 
 # Root

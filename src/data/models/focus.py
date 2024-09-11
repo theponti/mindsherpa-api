@@ -1,8 +1,9 @@
 import uuid
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Optional, Union
+from typing import Optional
 
+import pydantic
 import strawberry
 from langchain.pydantic_v1 import BaseModel, Field
 from sqlalchemy import UUID, ForeignKey, Integer, String
@@ -66,13 +67,6 @@ class Sentiment(str, Enum):
     negative = "negative"
 
 
-class DueDate(BaseModel):
-    month: Union[str, int]
-    day: Union[str, int]
-    year: Union[str, int]
-    time: Union[str, int]
-
-
 class FocusItemBase(BaseModel):
     type: ItemType
     task_size: TaskSize
@@ -88,11 +82,20 @@ class FocusItemBase(BaseModel):
     )
 
 
-class FocusItem(FocusItemBase):
-    id: int
+class FocusItemInput(pydantic.BaseModel):
+    category: str
     due_date: Optional[str]
-    profile_id: uuid.UUID
+    priority: int
+    sentiment: str
+    task_size: str
+    text: str
+    type: str
+
+
+class FocusItem(FocusItemInput):
+    id: int
     state: FocusState
+    profile_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
 
@@ -115,6 +118,22 @@ class Focus(Base):
     # Metadata
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(UTC))
+
+    def to_model(self) -> FocusItem:
+        return FocusItem(
+            id=self.id,
+            text=self.text,
+            type=self.type,
+            task_size=self.task_size,
+            category=self.category,
+            priority=self.priority,
+            sentiment=self.sentiment,
+            due_date=self.due_date.isoformat() if self.due_date else None,
+            profile_id=self.profile_id,
+            state=self.state,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )
 
     def to_json(self):
         return {
