@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from src.routers.ai_router import ai_router
 from src.routers.chat import chat_router
 from src.routers.graphql import graphql_router
-from src.routers.notes import notes_router
+from src.routers.notes_router import notes_router
 from src.routers.tasks import task_router
 from src.routers.user_intent import UserIntentRouter
 from src.routers.user_router import user_router

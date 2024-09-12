@@ -14,7 +14,7 @@ openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 openai_async_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
-openai_chat = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, api_key=SecretStr(OPENAI_API_KEY))
+openai_chat = ChatOpenAI(model="gpt-4o-2024-08-06", temperature=0.2, api_key=SecretStr(OPENAI_API_KEY))
 
 
 class ToolCall(BaseModel):

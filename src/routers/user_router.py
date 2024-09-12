@@ -67,7 +67,7 @@ def create_user_and_profile(db: SessionDep, input: CreateUserInput) -> ProfileOu
         user = create_user(
             session=db, user_id=input.user_id, email=input.email, name=input.name, provider="apple"
         )
-        profile = create_profile(session=db, user_id=user.id, provider="apple")
+        profile = create_profile(session=db, name=input.name, user_id=user.id, provider="apple")
 
     if not profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile does not exist")

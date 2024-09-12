@@ -16,9 +16,16 @@ services:
     ports:
       - "5678:5678"
       - "8002:8000"
-    volumes:
-      - .:/app
-      - /app/.venv
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL
+      - JWT_SECRET
+      - SUPABASE_URL
+      - SUPABASE_KEY
+      - GROQ_API_KEY
+      - OPENAI_API_KEY
+      - CHROMA_PUBLIC_URL
     command: uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
     depends_on:
       - postgres

@@ -4,7 +4,6 @@ from enum import Enum
 from typing import Optional
 
 import pydantic
-import strawberry
 from langchain.pydantic_v1 import BaseModel, Field
 from sqlalchemy import UUID, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, Session, mapped_column
@@ -13,7 +12,6 @@ from sqlalchemy.types import DateTime
 from src.data.db import Base
 
 
-@strawberry.enum
 class FocusState(Enum):
     backlog = "backlog"
     active = "active"

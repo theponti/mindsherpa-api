@@ -15,7 +15,7 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
-        default=uuid.uuid4,
+        nullable=False,
         index=True,
         unique=True,
     )
@@ -108,8 +108,10 @@ def create_user(
     return user
 
 
-def create_profile(session: Session, user_id: uuid.UUID, provider: Optional[str] = "apple") -> Profile:
-    profile = Profile(provider=provider, user_id=user_id)
+def create_profile(
+    session: Session, user_id: uuid.UUID, name: Optional[str] = None, provider: Optional[str] = "apple"
+) -> Profile:
+    profile = Profile(full_name=name, provider=provider, user_id=user_id)
     session.add(profile)
     session.commit()
     return profile

@@ -8,8 +8,8 @@ from pydantic import BaseModel, StringConstraints, ValidationError
 
 from src.data.focus import create_focus_items
 from src.data.models.focus import Focus, FocusItem, FocusItemInput, FocusState
+from src.routers.user_intent.user_intent_service import IntentsResponse, get_user_intent
 from src.services.openai_service import openai_client
-from src.services.sherpa import process_user_input
 from src.utils.context import CurrentProfile, SessionDep
 from src.utils.logger import logger
 
@@ -28,7 +28,12 @@ async def get_focus_items(profile: CurrentProfile, db: SessionDep, category: Opt
     profile_id = profile.id
 
     query = db.query(Focus).filter(
-        Focus.profile_id == profile_id, Focus.state.notin_([FocusState.completed.value])
+        Focus.profile_id == profile_id,
+        Focus.state.notin_(
+            [
+                FocusState.completed.value,
+            ]
+        ),
     )
 
     # Apply category filter if provided
@@ -56,12 +61,10 @@ class CreateFocusItemsResponse(BaseModel):
 
 
 @notes_router.post("/text")
-async def create_focus_items_from_text_route(
-    profile: CurrentProfile, input: CreateFocusItemsPayload
-) -> CreateFocusItemsResponse:
+async def create_text_note_route(profile: CurrentProfile, input: CreateFocusItemsPayload) -> IntentsResponse:
     try:
-        focus_items = process_user_input(user_input=input.content)
-        return CreateFocusItemsResponse(items=focus_items.items)
+        results = get_user_intent(input.content)
+        return results
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -76,9 +79,7 @@ class AudioUpload(BaseModel):
 
 
 @notes_router.post("/voice")
-async def create_focus_items_from_audio_route(
-    audio: AudioUpload, profile: CurrentProfile
-) -> CreateFocusItemsResponse:
+async def create_focus_items_from_audio_route(audio: AudioUpload, profile: CurrentProfile) -> IntentsResponse:
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_file_path = os.path.join(temp_dir, "temp_audio.m4a")
@@ -93,9 +94,9 @@ async def create_focus_items_from_audio_route(
                     model="whisper-1", file=audio_file, response_format="text"
                 )
 
-        focus_items = process_user_input(user_input=str(transcription))
+        results = get_user_intent(str(transcription))
 
-        return CreateFocusItemsResponse(items=focus_items.items)
+        return results
 
     except Exception as e:
         error_message = str(e)
