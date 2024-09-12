@@ -3,11 +3,11 @@ from typing import List
 
 from sqlalchemy.orm import Session
 
-from src.data.models.focus import Focus, FocusItemBase, FocusItemInput
+from src.data.models.focus import Focus, FocusItemInput
 
 
 def create_focus_items(
-    focus_items: List[FocusItemInput] | List[FocusItemBase], profile_id: uuid.UUID, session: Session
+    focus_items: List[FocusItemInput], profile_id: uuid.UUID, session: Session
 ) -> List[Focus]:
     try:
         created_items = [
