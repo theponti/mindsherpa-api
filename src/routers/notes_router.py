@@ -1,5 +1,4 @@
 import base64
-import json
 import os
 import tempfile
 from typing import Annotated, List, Optional
@@ -9,9 +8,8 @@ from pydantic import BaseModel, StringConstraints, ValidationError
 
 from src.data.focus import create_focus_items
 from src.data.models.focus import Focus, FocusItem, FocusItemInput, FocusState
-from src.routers.user_intent.user_intent_service import get_user_intent
+from src.routers.user_intent.user_intent_service import IntentsResponse, get_user_intent
 from src.services.openai_service import openai_client
-from src.services.sherpa import process_user_input
 from src.utils.context import CurrentProfile, SessionDep
 from src.utils.logger import logger
 
@@ -63,31 +61,10 @@ class CreateFocusItemsResponse(BaseModel):
 
 
 @notes_router.post("/text")
-async def create_text_note_route(
-    profile: CurrentProfile, input: CreateFocusItemsPayload
-) -> CreateFocusItemsResponse:
+async def create_text_note_route(profile: CurrentProfile, input: CreateFocusItemsPayload) -> IntentsResponse:
     try:
-        function_calls = get_user_intent(input.content)
-
-        create_tasks_calls = list(
-            filter(lambda call: call.function_name == "create_tasks", function_calls.intents)
-        )
-
-        focus_items: List[FocusItemInput] = []
-        for call in create_tasks_calls:
-            if isinstance(call.parameters, list):
-                for param in call.parameters:
-                    print(json.dumps(param, indent=4))
-                    focus_items.append(FocusItemInput(**param))  # type: ignore
-
-        print(json.dumps([item.json() for item in focus_items], indent=4))
-        try:
-            results = CreateFocusItemsResponse(items=focus_items)
-            return results
-        except Exception as e:
-            print(e)
-            raise HTTPException(status_code=500, detail="Internal Server Error")
-
+        results = get_user_intent(input.content)
+        return results
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -102,9 +79,7 @@ class AudioUpload(BaseModel):
 
 
 @notes_router.post("/voice")
-async def create_focus_items_from_audio_route(
-    audio: AudioUpload, profile: CurrentProfile
-) -> CreateFocusItemsResponse:
+async def create_focus_items_from_audio_route(audio: AudioUpload, profile: CurrentProfile) -> IntentsResponse:
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_file_path = os.path.join(temp_dir, "temp_audio.m4a")
@@ -119,9 +94,9 @@ async def create_focus_items_from_audio_route(
                     model="whisper-1", file=audio_file, response_format="text"
                 )
 
-        focus_items = process_user_input(user_input=str(transcription))
+        results = get_user_intent(str(transcription))
 
-        return CreateFocusItemsResponse(items=focus_items.items)
+        return results
 
     except Exception as e:
         error_message = str(e)

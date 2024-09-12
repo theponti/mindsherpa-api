@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
+from src.routers.user_intent.user_intent_service import get_user_intent
 from src.services.file_service import get_file_contents
 from src.services.openai_service import openai_async_client
 from src.services.sherpa import process_user_input
@@ -40,3 +41,17 @@ def sherpa_focus_item(request: Request, input: str = Form(...), dev_env=Depends(
         return process_user_input(test_user_input)
     completion = process_user_input(input)
     return completion
+
+
+@ai_router.post("/sherpa/intent")
+def sherpa_user_intent(request: Request, input: str = Form(...), dev_env=Depends(depends_on_development)):
+    content = input
+    if request.query_params.get("test"):
+        content = get_file_contents("src/prompts/test_user_input.md")
+
+    try:
+        intents = get_user_intent(content)
+        return intents
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")

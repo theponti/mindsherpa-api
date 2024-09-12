@@ -2,32 +2,31 @@ import json
 from datetime import datetime
 from typing import Annotated, Any, List, Optional
 
+import pydantic
 from fastapi.params import Form
-from langchain.prompts import ChatPromptTemplate, FewShotChatMessagePromptTemplate
-from langchain.pydantic_v1 import BaseModel, Field
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    FewShotChatMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
+from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.runnables import RunnablePassthrough
 from typing_extensions import Dict
 
+from src.data.models.focus import FocusItemBase
 from src.services.file_service import get_file_contents
-from src.services.groq_service import groq_chat
-from src.types.llm_output_types import LLMFocusItem
+from src.services.openai_service import openai_chat
 
 
-class Intent(BaseModel):
-    function_name: str = Field(description="The name of the function to call")
-    parameters: List[Dict[str, Any]] | Dict[str, Any] = Field(
-        description="The parameters to pass to the function"
-    )
-
-
-class Intents(BaseModel):
-    intents: List[Intent]
+class CreateTasksParameters(BaseModel):
+    tasks: List[FocusItemBase]
 
 
 class CreateTasksFunction(BaseModel):
     name: str = Field("create_tasks", description="Create a new list of tasks")
     description: str = Field("Create a new list of tasks")
-    parameters: List[LLMFocusItem] = Field(..., description="An array of tasks to be added to the list")
+    parameters: CreateTasksParameters = Field(..., description="An array of tasks to be added to the list")
 
 
 class SearchTasksParameters(BaseModel):
@@ -63,6 +62,17 @@ class EditTaskFunction(BaseModel):
     parameters: EditTaskParameters
 
 
+class Intent(BaseModel):
+    function_name: str = Field(description="The name of the function to call")
+    parameters: CreateTasksParameters | SearchTasksParameters | EditTaskParameters = Field(
+        description="The parameters to pass to the function"
+    )
+
+
+class Intents(BaseModel):
+    intents: List[Intent]
+
+
 user_intent_examples = [
     {
         "input": "I have to go to the grocery store and buy milk.",
@@ -70,27 +80,29 @@ user_intent_examples = [
             [
                 {
                     "name": "create_tasks",
-                    "parameters": [
-                        {
-                            "name": "Go to the grocery store",
-                            "type": "task",
-                            "task_size": "small",
-                            "text": "Go to the grocery store",
-                            "category": "shopping",
-                            "priority": 1,
-                            "sentiment": "neutral",
-                            "due_date": None,
-                        },
-                        {
-                            "type": "task",
-                            "task_size": "small",
-                            "text": "Buy milk",
-                            "category": "shopping",
-                            "priority": 1,
-                            "sentiment": "neutral",
-                            "due_date": None,
-                        },
-                    ],
+                    "parameters": {
+                        "tasks": [
+                            {
+                                "name": "Go to the grocery store",
+                                "type": "task",
+                                "task_size": "small",
+                                "text": "Go to the grocery store",
+                                "category": "shopping",
+                                "priority": 1,
+                                "sentiment": "neutral",
+                                "due_date": None,
+                            },
+                            {
+                                "type": "task",
+                                "task_size": "small",
+                                "text": "Buy milk",
+                                "category": "shopping",
+                                "priority": 1,
+                                "sentiment": "neutral",
+                                "due_date": None,
+                            },
+                        ],
+                    },
                 }
             ]
         ),
@@ -101,17 +113,19 @@ user_intent_examples = [
             [
                 {
                     "name": "create_tasks",
-                    "parameters": [
-                        {
-                            "type": "task",
-                            "task_size": "small",
-                            "text": "Call mom",
-                            "category": "personal_development",
-                            "priority": 1,
-                            "sentiment": "neutral",
-                            "due_date": "2024-07-24",
-                        }
-                    ],
+                    "parameters": {
+                        "tasks": [
+                            {
+                                "type": "task",
+                                "task_size": "small",
+                                "text": "Call mom",
+                                "category": "personal_development",
+                                "priority": 1,
+                                "sentiment": "neutral",
+                                "due_date": "2024-07-24",
+                            }
+                        ],
+                    },
                 }
             ]
         ),
@@ -122,26 +136,28 @@ user_intent_examples = [
             [
                 {
                     "name": "create_tasks",
-                    "parameters": [
-                        {
-                            "type": "task",
-                            "task_size": "small",
-                            "text": "Buy groceries",
-                            "category": "shopping",
-                            "priority": 1,
-                            "sentiment": "neutral",
-                            "due_date": None,
-                        },
-                        {
-                            "type": "task",
-                            "task_size": "small",
-                            "text": "Finish report",
-                            "category": "personal_development",
-                            "priority": 1,
-                            "sentiment": "neutral",
-                            "due_date": "2024-07-24",
-                        },
-                    ],
+                    "parameters": {
+                        "tasks": [
+                            {
+                                "type": "task",
+                                "task_size": "small",
+                                "text": "Buy groceries",
+                                "category": "shopping",
+                                "priority": 1,
+                                "sentiment": "neutral",
+                                "due_date": None,
+                            },
+                            {
+                                "type": "task",
+                                "task_size": "small",
+                                "text": "Finish report",
+                                "category": "personal_development",
+                                "priority": 1,
+                                "sentiment": "neutral",
+                                "due_date": "2024-07-24",
+                            },
+                        ],
+                    },
                 },
                 {"name": "search_tasks", "parameters": {"keyword": "email"}},
             ]
@@ -178,22 +194,34 @@ user_intent_examples = [
 ]
 
 
-def get_user_intent(user_input: Annotated[str, Form()]) -> Intents:
+class IntentOutput(pydantic.BaseModel):
+    function_name: str = pydantic.Field(description="The name of the function to call")
+    parameters: Dict[str, Any] = pydantic.Field(description="The parameters to pass to the function")
+
+
+class IntentsResponse(pydantic.BaseModel):
+    intents: List[IntentOutput]
+
+
+def get_user_intent(user_input: Annotated[str, Form()]) -> IntentsResponse:
     system_prompt = get_file_contents("src/routers/user_intent/user_intent_prompt.md")
-    # groq_chat.bind_tools(
-    #     [
-    #         CreateTasksFunction,
-    #         SearchTasksFunction,
-    #         EditTaskFunction,
-    #     ]
-    # )
+    openai_chat.bind_tools(
+        [
+            CreateTasksFunction,
+            SearchTasksFunction,
+            EditTaskFunction,
+        ]
+    )
 
-    structured_llm = groq_chat.with_structured_output(Intents)
-
-    # Define the prompt template
+    parser = JsonOutputParser(pydantic_object=Intents)
     chat_prompt = ChatPromptTemplate(
         [
-            ("system", system_prompt),
+            SystemMessagePromptTemplate.from_template(
+                template=system_prompt,
+                partial_variables={
+                    "format_instructions": parser.get_format_instructions(),
+                },
+            ),
             FewShotChatMessagePromptTemplate(
                 example_prompt=ChatPromptTemplate(
                     [
@@ -213,27 +241,14 @@ def get_user_intent(user_input: Annotated[str, Form()]) -> Intents:
             "current_date": RunnablePassthrough(),
         }
         | chat_prompt
-        | structured_llm
+        | openai_chat
+        | parser
     )
 
     result = chain.invoke({"user_input": user_input, "current_date": datetime.now().strftime("%Y-%m-%d")})
-    intents: List[Intent] | None = getattr(result, "intents", None)
+    intents: List[Intent] | None = result["intents"]
 
     if intents is None:
-        return Intents(intents=[])
+        return IntentsResponse(intents=[])
 
-    return Intents(intents=intents)
-
-
-def group_intents(intents: List[Intent]) -> List[Intent]:
-    grouped_intents = {}
-    for intent in intents:
-        if intent.function_name not in grouped_intents:
-            grouped_intents[intent.function_name] = []
-        grouped_intents[intent.function_name].append(intent.parameters)
-
-    result = []
-    for intent_group in grouped_intents.keys():
-        result.append({"function_name": intent_group, "parameters": grouped_intents[intent_group]})
-
-    return result
+    return IntentsResponse(intents=[IntentOutput(**intent) for intent in intents])  # type: ignore

@@ -8,3 +8,6 @@ When a user input requires multiple actions, you should respond with multiple fu
 - Your response MUST include everything the user mentions. All information is critical to supplying a superior result.
 - Your response MUST group related functions together.
 - Your response MUST group related parameters together.
+
+## Format Instructions
+{format_instructions}
