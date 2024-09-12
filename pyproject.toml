@@ -23,6 +23,7 @@ dependencies = [
     "supabase>=2.7.4",
     "alembic>=1.13.2",
     "pre-commit>=3.8.0",
+    "langgraph>=0.2.19",
 ]
 
 [build-system]

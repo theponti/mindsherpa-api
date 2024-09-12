@@ -5,11 +5,9 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
 from src.routers.ai_router import ai_router
-from src.routers.chat import chat_router
-from src.routers.graphql import graphql_router
-from src.routers.notes_router import notes_router
+from src.routers.chat_router import chat_router
+from src.routers.sherpa_router import sherpa_router
 from src.routers.tasks import task_router
-from src.routers.user_intent import UserIntentRouter
 from src.routers.user_router import user_router
 
 # Create FastAPI app
@@ -26,11 +24,9 @@ app.add_middleware(
 
 # Routers
 app.include_router(ai_router)
-app.include_router(graphql_router, prefix="/graphql")
-app.include_router(notes_router, prefix="/notes")
+app.include_router(sherpa_router, prefix="/notes")
 app.include_router(task_router, prefix="/tasks")
 app.include_router(chat_router, prefix="/chat")
-app.include_router(UserIntentRouter)
 app.include_router(user_router, prefix="/user")
 
 

@@ -2,10 +2,12 @@ import datetime
 import enum
 import uuid
 
+from pydantic import BaseModel
 from sqlalchemy import UUID, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.data.db import Base
+from src.utils.logger import logger
 
 
 class MessageRole(enum.Enum):
@@ -51,6 +53,15 @@ class Chat(Base):
         return f"<Chat(id={self.id}, title={self.title})>"
 
 
+class MessageOutput(BaseModel):
+    id: uuid.UUID
+    message: str
+    role: str
+    chat_id: uuid.UUID
+    profile_id: uuid.UUID
+    created_at: datetime.datetime
+
+
 class Message(Base):
     __tablename__ = "messages"
     id: Mapped[uuid.UUID] = mapped_column(
@@ -67,6 +78,20 @@ class Message(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.now(datetime.UTC)
     )
+
+    def message_to_gql(self) -> MessageOutput:
+        try:
+            return MessageOutput(
+                id=self.id,
+                message=self.message,
+                role=self.role,
+                chat_id=self.chat_id,
+                profile_id=self.profile_id,
+                created_at=self.created_at,
+            )
+        except AttributeError as e:
+            logger.error(f"Error converting MessageModel to Message: {e}")
+            raise ValueError("Invalid MessageModel data")
 
     def __repr__(self):
         return f"<Message(id={self.id}, message={self.message})>"

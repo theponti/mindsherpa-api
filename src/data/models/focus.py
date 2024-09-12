@@ -66,21 +66,21 @@ class Sentiment(str, Enum):
 
 
 class FocusItemBase(BaseModel):
-    type: ItemType
-    task_size: TaskSize
-    text: str
     category: Category = Field(
         description="Shopping, grocery shopping, fashion, beauty, and personal style. Also includes items related to buying and selling.",
     )
-    priority: int = Field(ge=1, le=5)
-    sentiment: Sentiment
     due_date: Optional[str] = Field(
         None,
         description="The deadline for completing the item in YYYY-MM-DDTHH:MM format. Example: due_date: 2023-01-01T12:00",
     )
+    priority: int = Field(ge=1, le=5)
+    sentiment: Sentiment
+    task_size: TaskSize
+    text: str
+    type: ItemType
 
 
-class FocusItemInput(pydantic.BaseModel):
+class FocusItemBaseV2(pydantic.BaseModel):
     category: str
     due_date: Optional[str]
     priority: int
@@ -90,7 +90,7 @@ class FocusItemInput(pydantic.BaseModel):
     type: str
 
 
-class FocusItem(FocusItemInput):
+class FocusItem(FocusItemBaseV2):
     id: int
     state: FocusState
     profile_id: uuid.UUID

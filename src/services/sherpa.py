@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from src.data.context import get_user_context
 from src.data.models.chat import Message
-from src.data.models.focus import FocusItemBase, FocusItemInput, get_focus_by_profile_id
+from src.data.models.focus import FocusItemBase, FocusItemBaseV2, get_focus_by_profile_id
 from src.data.models.user import User
 from src.services.groq_service import groq_chat
 from src.services.prompt_service import AvailablePrompts, get_prompt
@@ -40,7 +40,7 @@ class LLMFocusOutput(BaseModel):
 
 
 class ProcessUserInputResponse(pydantic.BaseModel):
-    items: List[FocusItemInput]
+    items: List[FocusItemBaseV2]
 
 
 def process_user_input(user_input: str) -> ProcessUserInputResponse:
@@ -76,7 +76,7 @@ def process_user_input(user_input: str) -> ProcessUserInputResponse:
             {"user_input": f"Current Date: {datetime.now().strftime('%A %B %d, %Y')}\n\n{user_input}"}
         )
 
-        return ProcessUserInputResponse(items=[FocusItemInput(**item) for item in llm_response["items"]])
+        return ProcessUserInputResponse(items=[FocusItemBaseV2(**item) for item in llm_response["items"]])
     except Exception as e:
         logger.error(f"Error processing user input: {e}")
         raise e

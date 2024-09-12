@@ -1,12 +1,14 @@
 import logging
 from datetime import datetime
+from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic.main import BaseModel
 
-from src.data.models.chat import Chat, ChatState, Message
-from src.resolvers.chat_resolvers import MessageOutput, message_to_gql
+from src.data.chat import insert_message
+from src.data.models.chat import Chat, ChatState, Message, MessageOutput, MessageRole
+from src.services.sherpa import get_sherpa_response
 from src.utils.context import CurrentProfile, CurrentUser, SessionDep
 
 chat_router = APIRouter()
@@ -89,4 +91,40 @@ async def get_chat(db: SessionDep, user: CurrentUser, chat_id: UUID) -> list[Mes
 
     messages = db.query(Message).filter(Message.chat_id == chat_id).all()
 
-    return [message_to_gql(message) for message in messages]
+    return [message.message_to_gql() for message in messages]
+
+
+class ChatMessageInput(BaseModel):
+    message: str
+
+
+@chat_router.post("/{chat_id}/messages")
+async def send_chat_message(
+    db: SessionDep, profile: CurrentProfile, input: ChatMessageInput, request: Request
+) -> List[MessageOutput]:
+    chat_id = UUID(request.path_params["chat_id"])
+    user = profile.user
+
+    # Insert new message into the database
+    user_message = insert_message(
+        db, chat_id=chat_id, profile_id=profile.id, message=input.message, role="user"
+    )
+
+    # Retrieve message from ChatGPT
+    sherpa_response = get_sherpa_response(db, input.message, profile.id, user=user)
+    if sherpa_response is None:
+        raise Exception("No response from the model")
+
+    # Save system response to the database
+    system_message = insert_message(
+        db,
+        chat_id=chat_id,
+        profile_id=profile.id,
+        role=MessageRole.ASSISTANT.value,
+        message=sherpa_response.message,
+    )
+
+    return [
+        user_message,
+        system_message,
+    ]

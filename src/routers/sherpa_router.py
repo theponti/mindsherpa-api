@@ -7,20 +7,24 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, StringConstraints, ValidationError
 
 from src.data.focus import create_focus_items
-from src.data.models.focus import Focus, FocusItem, FocusItemInput, FocusState
-from src.routers.user_intent.user_intent_service import IntentsResponse, get_user_intent
+from src.data.models.focus import Focus, FocusItem, FocusItemBaseV2, FocusState
+from src.routers.user_intent.user_intent_service import (
+    GeneratedIntentsResponse,
+    generate_intent_result,
+    get_user_intent,
+)
 from src.services.openai_service import openai_client
 from src.utils.context import CurrentProfile, SessionDep
 from src.utils.logger import logger
 
-notes_router = APIRouter()
+sherpa_router = APIRouter()
 
 
 class FocusOutput(BaseModel):
     items: List[FocusItem]
 
 
-@notes_router.get("/focus")
+@sherpa_router.get("/focus")
 async def get_focus_items(profile: CurrentProfile, db: SessionDep, category: Optional[str] = None):
     """
     Returns notes structure content as well as total tokens and total time for generation.
@@ -57,14 +61,18 @@ class CreateFocusItemsPayload(BaseModel):
 
 
 class CreateFocusItemsResponse(BaseModel):
-    items: List[FocusItemInput]
+    items: List[FocusItemBaseV2]
 
 
-@notes_router.post("/text")
-async def create_text_note_route(profile: CurrentProfile, input: CreateFocusItemsPayload) -> IntentsResponse:
+@sherpa_router.post("/text")
+async def create_text_note_route(
+    profile: CurrentProfile, input: CreateFocusItemsPayload
+) -> GeneratedIntentsResponse:
     try:
-        results = get_user_intent(input.content)
-        return results
+        intent = get_user_intent(input.content, profile_id=profile.id)
+        result = generate_intent_result(intent)
+
+        return result
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -78,8 +86,10 @@ class AudioUpload(BaseModel):
     audio_data: str
 
 
-@notes_router.post("/voice")
-async def create_focus_items_from_audio_route(audio: AudioUpload, profile: CurrentProfile) -> IntentsResponse:
+@sherpa_router.post("/voice")
+async def create_focus_items_from_audio_route(
+    audio: AudioUpload, profile: CurrentProfile
+) -> GeneratedIntentsResponse:
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_file_path = os.path.join(temp_dir, "temp_audio.m4a")
@@ -94,9 +104,10 @@ async def create_focus_items_from_audio_route(audio: AudioUpload, profile: Curre
                     model="whisper-1", file=audio_file, response_format="text"
                 )
 
-        results = get_user_intent(str(transcription))
+        intent = get_user_intent(str(transcription), profile_id=profile.id)
+        result = generate_intent_result(intent)
 
-        return results
+        return result
 
     except Exception as e:
         error_message = str(e)
@@ -116,13 +127,13 @@ async def create_focus_items_from_audio_route(audio: AudioUpload, profile: Curre
             raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {error_message}")
 
 
-class CreateFocusItemInput(BaseModel):
-    items: List[FocusItemInput]
+class CreateFocusItemBaseV2(BaseModel):
+    items: List[FocusItemBaseV2]
 
 
-@notes_router.post("/focus")
+@sherpa_router.post("/focus")
 async def create_focus_item_route(
-    input: CreateFocusItemInput, db: SessionDep, profile: CurrentProfile
+    input: CreateFocusItemBaseV2, db: SessionDep, profile: CurrentProfile
 ) -> List[FocusItem]:
     try:
         created_items = create_focus_items(
@@ -140,7 +151,7 @@ async def create_focus_item_route(
             raise HTTPException(status_code=500, detail=str(e))
 
 
-@notes_router.delete("/focus/{id}")
+@sherpa_router.delete("/focus/{id}")
 async def delete_focus_item_route(id: int, db: SessionDep, profile: CurrentProfile) -> bool:
     note = db.query(Focus).filter(Focus.id == id).first()
     if not note:

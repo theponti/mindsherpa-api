@@ -1,7 +1,14 @@
+import traceback
+import uuid
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from src.routers.user_intent.user_intent_service import get_user_intent
+from src.routers.user_intent.user_intent_service import (
+    GeneratedIntentsResponse,
+    generate_intent_result,
+    get_user_intent,
+)
 from src.services.file_service import get_file_contents
 from src.services.openai_service import openai_async_client
 from src.services.sherpa import process_user_input
@@ -17,11 +24,22 @@ def depends_on_development():
     return True
 
 
+@ai_router.post("/chat")
+async def chat(message: str = Form(...), dev_env=Depends(depends_on_development)):
+    response = await openai_async_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": message}],
+        stream=False,
+    )
+
+    return response.choices[0].message.content
+
+
 @ai_router.post("/chat/stream")
 async def stream_chat(message: str = Form(...), dev_env=Depends(depends_on_development)):
     async def generate():
         stream = await openai_async_client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": message}],
             stream=True,
         )
@@ -44,14 +62,40 @@ def sherpa_focus_item(request: Request, input: str = Form(...), dev_env=Depends(
 
 
 @ai_router.post("/sherpa/intent")
-def sherpa_user_intent(request: Request, input: str = Form(...), dev_env=Depends(depends_on_development)):
+def sherpa_user_intent(
+    request: Request,
+    input: str = Form(...),
+    profile_id: uuid.UUID = Form(...),
+    dev_env=Depends(depends_on_development),
+):
     content = input
     if request.query_params.get("test"):
         content = get_file_contents("src/prompts/test_user_input.md")
 
     try:
-        intents = get_user_intent(content)
+        intents = get_user_intent(content, profile_id=profile_id)
         return intents
     except Exception as e:
         print(e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@ai_router.post("/sherpa/intent/agent")
+def sherpa_user_intent_agent(
+    request: Request,
+    input: str = Form(...),
+    profile_id: uuid.UUID = Form(...),
+    dev_env=Depends(depends_on_development),
+) -> GeneratedIntentsResponse:
+    content = input
+    if request.query_params.get("test"):
+        content = get_file_contents("src/prompts/test_user_input.md")
+
+    try:
+        intent = get_user_intent(content, profile_id=profile_id)
+        result = generate_intent_result(intent)
+
+        return result
+    except Exception:  # pylint: disable=broad-except
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
