@@ -168,7 +168,7 @@ def create_focus(session: Session, text: str, profile_id: uuid.UUID) -> Focus:
 
 def complete_focus(session: Session, focus_id: int) -> Focus:
     focus = get_focus_by_id(session, focus_id)
-    focus.state = FocusState.completed
+    focus.state = FocusState.completed.value  # type: ignore
     session.commit()
     session.flush()
     return focus
