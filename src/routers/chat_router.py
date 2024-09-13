@@ -6,6 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic.main import BaseModel
+from sqlalchemy.orm import Session
 
 from src.data.chat_repository import insert_message
 from src.data.models.chat import Chat, ChatState, Message, MessageOutput, MessageRole
@@ -21,7 +22,7 @@ class ChatOutput(BaseModel):
     created_at: datetime
 
 
-def get_active_chat(db: SessionDep, profile_id: uuid.UUID) -> Chat | None:
+def get_active_chat(db: Session, profile_id: uuid.UUID) -> Chat | None:
     return (
         db.query(Chat)
         .filter(Chat.profile_id == profile_id)
