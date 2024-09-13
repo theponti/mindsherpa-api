@@ -24,6 +24,9 @@ define run_in_postgres
 endef
 
 test:
+	@echo "Dropping test database..."
+	$(call run_in_postgres, DROP DATABASE IF EXISTS $(TEST_DB_NAME);)
+
 	@echo "Creating test database..."
 	$(call run_in_postgres, CREATE DATABASE $(TEST_DB_NAME);)
 
@@ -37,6 +40,6 @@ test:
 	DATABASE_URL="postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(TEST_DB_NAME)" pytest tests/ -v
 
 	@echo "Dropping test database..."
-	$(call run_in_postgres, DROP DATABASE $(TEST_DB_NAME);)
+	$(call run_in_postgres, DROP DATABASE IF EXISTS $(TEST_DB_NAME);)
 
 .PHONY: test

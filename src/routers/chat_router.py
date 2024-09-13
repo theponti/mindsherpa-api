@@ -38,7 +38,7 @@ async def get_active_chat_route(
     profile: CurrentProfile,
 ) -> ChatOutput | None:
     try:
-        chat = get_active_chat(db, profile)
+        chat = get_active_chat(db, profile.id)
 
         if chat is None:
             chat = Chat(

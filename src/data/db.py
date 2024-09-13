@@ -4,13 +4,13 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from src.utils.config import settings
 from src.utils.logger import logger
 
-engine = create_engine(settings.DATABASE_URL, echo=True)
+engine = create_engine(settings.DATABASE_URL)
 
 Base = declarative_base()
 
 # Session
 Session = sessionmaker(engine)
-SessionLocal = sessionmaker(autocommit=False, autoflush=True, bind=engine)
+SessionLocal = sessionmaker(bind=engine)
 
 
 def connect_to_db():
@@ -20,6 +20,3 @@ def connect_to_db():
         connection.close()
     except Exception as e:
         logger.error(f"An error occurred: {e}")
-
-
-# connect_to_db()

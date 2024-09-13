@@ -12,7 +12,6 @@ from src.data.models.user import Profile, User
 from src.main import app
 from src.utils.config import settings
 from src.utils.context import get_db
-from src.utils.logger import logger
 from src.utils.security import ACCESS_TOKEN_EXPIRE_MINUTES, AccessTokenSubject, TokenService
 
 # Test database URL
@@ -21,7 +20,7 @@ TEST_DATABASE_URL = "postgresql://postgres:postgres@localhost:5434/test_db"
 
 @pytest.fixture(scope="session")
 def db_engine():
-    engine = create_engine(settings.DATABASE_URL, echo=True)
+    engine = create_engine(settings.DATABASE_URL)
     Base.metadata.create_all(bind=engine)
     yield engine
     Base.metadata.drop_all(bind=engine)
@@ -70,16 +69,11 @@ def user(db_session):
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
-    logger.info(f"User created in fixture: {user.id}, {user.email}")
 
     # Verify the user exists in the database
     queried_user = db_session.query(User).filter(User.email == "test@example.com").first()
-    if queried_user:
-        logger.info(f"User found in database after creation: {queried_user.id}, {queried_user.email}")
-    else:
-        logger.error("User not found in database after creation")
 
-    return user
+    return queried_user
 
 
 @pytest.fixture(scope="function")
