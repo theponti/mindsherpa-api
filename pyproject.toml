@@ -24,6 +24,8 @@ dependencies = [
     "alembic>=1.13.2",
     "pre-commit>=3.8.0",
     "langgraph>=0.2.19",
+    "chromadb>=0.5.5",
+    "langchain-chroma>=0.1.2",
 ]
 
 [build-system]

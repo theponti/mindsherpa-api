@@ -82,22 +82,20 @@ def edit_task(task_query: str, new_task_name: str, new_due_date: str, new_status
 
 
 @tool("chat")
-def chat(message: str) -> str:
+def start_chat(
+    user_message: str = Field(description="The user's message"),
+) -> str:
     """
     This tool is used to begin a chat with the user.
 
     This should be used if the user says something that does not match any of the other tools.
     """
-    return message
+    return user_message
 
 
 def get_user_intent(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
     system_prompt = get_file_contents("src/routers/user_intent/user_intent_prompt.md")
-    tools = [
-        create_tasks,
-        search_tasks,
-        edit_task,
-    ]
+    tools = [create_tasks, search_tasks, edit_task, start_chat]
     chat_prompt = ChatPromptTemplate(
         [
             SystemMessagePromptTemplate.from_template(

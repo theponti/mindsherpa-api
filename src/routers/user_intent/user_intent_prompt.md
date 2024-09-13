@@ -28,7 +28,7 @@ When processing user inputs, follow the guidelines below strictly:
 
 - If the user asks something that implies a search for tasks (e.g., "What should I work on?", "What do I need to do today?"), handle the request with the following rules:
     - Use an empty string for the `keyword` parameter in the function call.
-    - Use `"null"` for `due_on`, `due_after`, or `due_before` unless the user specifies a time.
+    - Use `null` for `due_on`, `due_after`, or `due_before` unless the user specifies a time.
     - Use `"backlog"` for the `status` parameter unless the user explicitly asks about completed tasks (in which case use `"completed"`).
 
 ---

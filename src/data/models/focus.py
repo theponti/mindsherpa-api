@@ -137,12 +137,12 @@ class Focus(Base):
             "task_size": self.task_size,
             "category": self.category,
             "priority": self.priority,
-            "profile_id": self.profile_id,
+            "profile_id": str(self.profile_id),
             "sentiment": self.sentiment,
-            "state": self.state,
-            "due_date": self.due_date,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
+            "state": str(self.state),
+            "due_date": self.due_date.isoformat() if self.due_date else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
 

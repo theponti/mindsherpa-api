@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from langchain.pydantic_v1 import BaseModel, SecretStr
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from openai import AsyncOpenAI, OpenAI
 
 from src.utils.config import settings
@@ -15,6 +15,8 @@ openai_client = OpenAI(api_key=OPENAI_API_KEY)
 openai_async_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
 openai_chat = ChatOpenAI(model="gpt-4o-2024-08-06", temperature=0.2, api_key=SecretStr(OPENAI_API_KEY))
+
+openai_embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
 
 
 class ToolCall(BaseModel):

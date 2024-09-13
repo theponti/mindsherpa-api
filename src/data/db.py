@@ -4,7 +4,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from src.utils.config import settings
 from src.utils.logger import logger
 
-engine = create_engine(settings.DATABASE_URL)
+engine = create_engine(settings.DATABASE_URL, echo=settings.ENVIRONMENT == "local")
 
 Base = declarative_base()
 

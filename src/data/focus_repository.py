@@ -1,11 +1,14 @@
+import traceback
 import uuid
 from datetime import datetime
 from typing import List, Optional
 
+from langchain_core.documents import Document
 from sqlalchemy.orm import Session
 
 from src.data.db import SessionLocal
 from src.data.models.focus import Focus, FocusItem, FocusItemBase, FocusItemBaseV2, FocusState
+from src.services import chroma
 
 NON_TASK_TYPES = ["chat", "feeling", "request", "question"]
 
@@ -34,6 +37,16 @@ def create_focus_items(
         session.add_all(created_items)
         session.flush()
         session.commit()
+
+        try:
+            documents = [Document(page_content=item.text, metadata=item.to_json()) for item in created_items]
+            uuids = [str(uuid.uuid4()) for _ in range(len(documents))]
+            ids = chroma.vector_store.add_documents(documents=documents, ids=uuids)
+            print("chroma ids", ids)
+        except Exception as e:
+            traceback.print_exc()
+            print(f"Error adding documents to Chroma: {e}")
+
         return created_items
     except Exception as e:
         print(f"Error creating focus items: {e}")
@@ -48,16 +61,25 @@ def search_focus_items(
     status: Optional[FocusState],
 ) -> List[FocusItem]:
     session = SessionLocal()
+    ids = []
+    if len(keyword) > 0:
+        results = chroma.vector_store.similarity_search(keyword)
+        ids = [res.metadata["id"] for res in results]
+
     try:
-        query = session.query(Focus).filter(
-            Focus.text.contains(keyword)
-            & (
-                (Focus.due_date == due_on)
-                if due_on is not None
-                else ((Focus.due_date >= due_after) if due_after is not None else True)
-            )
-            & (Focus.due_date <= due_before if due_before is not None else True)
-        )
+        query = session.query(Focus)
+
+        if len(ids) > 0:
+            query = query.filter(Focus.id.in_(ids))
+
+        if due_on is not None:
+            query.filter(Focus.due_date == due_on)
+        else:
+            if due_after is not None:
+                query = query.filter(Focus.due_date >= due_after)
+
+            if due_before is not None:
+                query = query.filter(Focus.due_date <= due_before)
 
         if status == "active" or status == "backlog":
             query = query.filter(Focus.state.in_([FocusState.backlog.value, FocusState.active.value]))

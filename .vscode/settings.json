@@ -31,5 +31,13 @@
     "supabase",
     "uvicorn"
   ],
-  "cSpell.words": ["cfgv", "chromadb", "hotdate", "httpx", "pyright", "venv"]
+  "cSpell.words": [
+    "cfgv",
+    "chromadb",
+    "hotdate",
+    "httpx",
+    "metadatas",
+    "pyright",
+    "venv"
+  ]
 }
