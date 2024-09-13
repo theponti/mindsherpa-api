@@ -6,7 +6,7 @@ from typing import Annotated, List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, StringConstraints, ValidationError
 
-from src.data.focus import create_focus_items
+from src.data.focus_repository import create_focus_items
 from src.data.models.focus import Focus, FocusItem, FocusItemBaseV2, FocusState
 from src.routers.user_intent.user_intent_service import (
     GeneratedIntentsResponse,
@@ -60,12 +60,8 @@ class CreateFocusItemsPayload(BaseModel):
     content: Annotated[str, StringConstraints(min_length=1)]
 
 
-class CreateFocusItemsResponse(BaseModel):
-    items: List[FocusItemBaseV2]
-
-
 @sherpa_router.post("/text")
-async def create_text_note_route(
+async def handle_text_input_route(
     profile: CurrentProfile, input: CreateFocusItemsPayload
 ) -> GeneratedIntentsResponse:
     try:
@@ -83,13 +79,13 @@ async def create_text_note_route(
 
 class AudioUpload(BaseModel):
     filename: str
+    """The name of the audio file to be uploaded."""
     audio_data: str
+    """The base64 encoded audio data."""
 
 
 @sherpa_router.post("/voice")
-async def create_focus_items_from_audio_route(
-    audio: AudioUpload, profile: CurrentProfile
-) -> GeneratedIntentsResponse:
+async def handle_audio_upload_route(audio: AudioUpload, profile: CurrentProfile) -> GeneratedIntentsResponse:
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_file_path = os.path.join(temp_dir, "temp_audio.m4a")

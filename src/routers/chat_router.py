@@ -1,4 +1,5 @@
 import logging
+import uuid
 from datetime import datetime
 from typing import List
 from uuid import UUID
@@ -6,9 +7,9 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic.main import BaseModel
 
-from src.data.chat import insert_message
+from src.data.chat_repository import insert_message
 from src.data.models.chat import Chat, ChatState, Message, MessageOutput, MessageRole
-from src.services.sherpa import get_sherpa_response
+from src.services.chat_service import get_chat_response
 from src.utils.context import CurrentProfile, CurrentUser, SessionDep
 
 chat_router = APIRouter()
@@ -20,19 +21,23 @@ class ChatOutput(BaseModel):
     created_at: datetime
 
 
+def get_active_chat(db: SessionDep, profile_id: uuid.UUID) -> Chat | None:
+    return (
+        db.query(Chat)
+        .filter(Chat.profile_id == profile_id)
+        .filter(Chat.state == ChatState.ACTIVE.value)
+        .order_by(Chat.created_at.desc())
+        .first()
+    )
+
+
 @chat_router.get("/active")
-async def get_active_chat(
+async def get_active_chat_route(
     db: SessionDep,
     profile: CurrentProfile,
 ) -> ChatOutput | None:
     try:
-        chat = (
-            db.query(Chat)
-            .filter(Chat.profile_id == profile.id)
-            .filter(Chat.state == ChatState.ACTIVE.value)
-            .order_by(Chat.created_at.desc())
-            .first()
-        )
+        chat = get_active_chat(db, profile)
 
         if chat is None:
             chat = Chat(
@@ -111,7 +116,7 @@ async def send_chat_message(
     )
 
     # Retrieve message from ChatGPT
-    sherpa_response = get_sherpa_response(db, input.message, profile.id, user=user)
+    sherpa_response = get_chat_response(db, input.message, profile.id, user=user)
     if sherpa_response is None:
         raise Exception("No response from the model")
 

@@ -15,8 +15,8 @@ from langchain_core.tools import tool
 from typing_extensions import Dict, TypedDict
 
 from src.data.db import SessionLocal
-from src.data.focus import create_focus_items, search_focus_items
-from src.data.models.focus import Focus, FocusItem, FocusItemBase, FocusItemBaseV2, FocusState
+from src.data.focus_repository import create_focus_items, search_focus_items
+from src.data.models.focus import FocusItem, FocusItemBase, FocusItemBaseV2, FocusState
 from src.services.file_service import get_file_contents
 from src.services.openai_service import openai_chat
 
@@ -46,7 +46,12 @@ def create_tasks(
     profile_id: uuid.UUID = Field(description="The user's Profile ID"),
     tasks: List[FocusItemBase] = Field(description="An array of tasks to be added to the list"),
 ) -> List[FocusItem]:
-    """Create a new list of tasks"""
+    """
+    This tool is used to create to-do list items for the user.
+
+    This tool should only be used for items that can be completed. Anything else should should
+    use the `chat` tool.
+    """
     session = SessionLocal()
     created_items = create_focus_items(focus_items=tasks, session=session, profile_id=profile_id)
     return [item.to_model() for item in created_items]
@@ -59,8 +64,8 @@ def search_tasks(
     due_after: Optional[datetime],
     due_before: Optional[datetime],
     status: Optional[FocusState],
-) -> List[Focus]:
-    """Search for tasks based on a keyword or specific attributes"""
+) -> List[FocusItem]:
+    """Search for tasks based on a keyword or specific attributes."""
     return search_focus_items(
         keyword=keyword,
         due_on=due_on,
@@ -76,8 +81,18 @@ def edit_task(task_query: str, new_task_name: str, new_due_date: str, new_status
     return True
 
 
+@tool("chat")
+def chat(message: str) -> str:
+    """
+    This tool is used to begin a chat with the user.
+
+    This should be used if the user says something that does not match any of the other tools.
+    """
+    return message
+
+
 def get_user_intent(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
-    system_prompt = get_file_contents("src/routers/user_intent/user_intent_prompt_base.md")
+    system_prompt = get_file_contents("src/routers/user_intent/user_intent_prompt.md")
     tools = [
         create_tasks,
         search_tasks,
@@ -112,8 +127,16 @@ def get_user_intent(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
     return result
 
 
+class SearchIntentParameters(TypedDict):
+    keyword: str
+    due_on: Optional[datetime]
+    due_after: Optional[datetime]
+    due_before: Optional[datetime]
+    status: Optional[str]
+
+
 class SearchIntentsResponse(pydantic.BaseModel):
-    input: str
+    input: SearchIntentParameters
     output: List[FocusItem]
 
 
@@ -168,15 +191,21 @@ def get_create_tasks(intermediate_steps) -> CreateIntentsResponse | None:
 
 
 class GeneratedIntentsResponse(pydantic.BaseModel):
-    output: str
+    output: str | None
     create: CreateIntentsResponse | None
     search: SearchIntentsResponse | None
 
 
 def generate_intent_result(intent) -> GeneratedIntentsResponse:
     steps = intent["intermediate_steps"]
+    output = intent["output"]
+    search_output = get_search_tasks(steps)
+
+    if search_output and len(search_output.output) > 0:
+        output = None
+
     return GeneratedIntentsResponse(
-        output=intent["output"],
+        output=output,
         create=get_create_tasks(steps),
-        search=get_search_tasks(steps),
+        search=search_output,
     )

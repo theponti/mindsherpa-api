@@ -24,10 +24,6 @@ class ItemType(str, Enum):
     task = "task"
     goal = "goal"
     reminder = "reminder"
-    note = "note"
-    feeling = "feeling"
-    request = "request"
-    question = "question"
 
 
 class TaskSize(str, Enum):
@@ -82,7 +78,7 @@ class FocusItemBase(BaseModel):
 
 class FocusItemBaseV2(pydantic.BaseModel):
     category: str
-    due_date: Optional[str]
+    due_date: Optional[str] = None
     priority: int
     sentiment: str
     task_size: str
