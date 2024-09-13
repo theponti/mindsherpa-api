@@ -28,8 +28,11 @@ jobs:
 
       - name: Apply Alembic migrations
         env:
+          CI: true
           ENVIRONMENT: production
-          CHROMA_PUBLIC_URL: "http://localhost:8000"
+          CHROMA_PUBLIC_URL: "http://chroma:8000"
+          CHROMA_SERVER_AUTHN_CREDENTIALS: test-token
+          CHROMA_SERVER_AUTHN_PROVIDER: chromadb.auth.token_authn.TokenAuthenticationServerProvider
           JWT_SECRET: fake_jwt_secret
           GROQ_API_KEY: fake_groq_api_key
           OPENAI_API_KEY: fake_openai_api_key

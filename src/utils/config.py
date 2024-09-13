@@ -20,6 +20,7 @@ def parse_cors(v: Any) -> list[str] | str:
 
 class _Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
+    CI: bool | None = None
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ADMIN_TOKEN: str = secrets.token_urlsafe(32)
     # 60 minutes * 24 hours * 8 days = 8 days
@@ -33,6 +34,10 @@ class _Settings(BaseSettings):
     SUPABASE_KEY: str
     GROQ_API_KEY: str
     OPENAI_API_KEY: str
+
+    # Chroma
+    CHROMA_SERVER_AUTHN_PROVIDER: str
+    CHROMA_SERVER_AUTHN_CREDENTIALS: str
     CHROMA_PUBLIC_URL: str
 
     @computed_field  # type: ignore[prop-decorator]

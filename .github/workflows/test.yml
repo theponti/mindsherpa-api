@@ -8,20 +8,27 @@ on:
     branches: [main] # Adjust this if your main branch has a different name
 
 env:
+  CHROMA_PUBLIC_URL: http://chroma:8000
+  CHROMA_SERVER_AUTHN_CREDENTIALS: test-token
+  CHROMA_SERVER_AUTHN_PROVIDER: chromadb.auth.token_authn.TokenAuthenticationServerProvider
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5434/test_db
   ENVIRONMENT: test
-  CHROMA_PUBLIC_URL: "http://localhost:8000"
-  JWT_SECRET: fake_jwt_secret
   GROQ_API_KEY: fake_groq_api_key
+  JWT_SECRET: fake_jwt_secret
   OPENAI_API_KEY: fake_openai_api_key
   SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0Z2R2cW10YmJ0aWZ2Z2N0Z3Z3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTYzMjI4MjQsImV4cCI6MjAxMTg5ODgyNH0.i9QWzUY21Y4q0sZ57YB5489J7x089g64vj9229111"
   SUPABASE_URL: "http://supabase:3000"
-  DATABASE_URL: postgresql://postgres:postgres@localhost:5434/test_db
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
     services:
+      chroma:
+        image: ghcr.io/chroma-core/chroma:latest
+        ports:
+          - 8000:8000
+
       postgres:
         image: postgres:13
         env:

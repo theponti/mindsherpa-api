@@ -26,6 +26,8 @@ services:
       - GROQ_API_KEY
       - OPENAI_API_KEY
       - CHROMA_PUBLIC_URL
+      - CHROMA_SERVER_AUTHN_CREDENTIALS
+      - CHROMA_SERVER_AUTHN_PROVIDER
     command: uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
     depends_on:
       - postgres
@@ -50,7 +52,11 @@ services:
 
   chroma:
     container_name: mindsherpa-chroma
-    image: ghcr.io/chroma-core/chroma:latest
+    image: ghcr.io/chroma-core/chroma:0.5.6.dev97
+    environment:
+      CHROMA_SERVER_AUTHN_CREDENTIALS: "test-token"
+      CHROMA_SERVER_AUTHN_PROVIDER: "chromadb.auth.token_authn.TokenAuthenticationServerProvider"
+      CHROMA_AUTH_TOKEN_TRANSPORT_HEADER: "X-Chroma-Token"
     volumes:
       - chroma_data:/chroma/chroma
     ports:
