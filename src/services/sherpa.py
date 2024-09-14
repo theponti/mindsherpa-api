@@ -13,7 +13,7 @@ from langchain_core.runnables import RunnablePassthrough
 from src.data.models.focus import FocusItemBase, FocusItemBaseV2
 from src.services.groq_service import groq_chat
 from src.services.prompt_service import AvailablePrompts, get_prompt
-from src.utils.generation_statistics import GenerationStatistics
+from src.utils.llm_tools.generation_statistics import GenerationStatistics
 from src.utils.logger import logger
 
 

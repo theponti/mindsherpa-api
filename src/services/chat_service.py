@@ -61,7 +61,6 @@ def get_chat_response(session: Session, message: str, profile_id: uuid.UUID, use
         if isinstance(llm_response.content, str):
             try:
                 parsed = parser.parse(llm_response.content)
-                print(parsed["metadata"])
                 return SherpaResponse(message=parsed["message"], metadata=parsed["metadata"])
             except Exception:
                 return SherpaResponse(message=llm_response.content)

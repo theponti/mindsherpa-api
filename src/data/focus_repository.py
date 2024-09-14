@@ -10,7 +10,26 @@ from src.data.db import SessionLocal
 from src.data.models.focus import Focus, FocusItem, FocusItemBase, FocusItemBaseV2, FocusState
 from src.services import chroma
 
+# Crons
+
 NON_TASK_TYPES = ["chat", "feeling", "request", "question"]
+
+
+def add_focus_items_to_vector_store(session: Session, focus_items: List[Focus]) -> List[Focus] | None:
+    try:
+        documents = [Document(page_content=item.text, metadata=item.to_json()) for item in focus_items]
+        uuids = [str(uuid.uuid4()) for _ in range(len(documents))]
+        ids = chroma.vector_store.add_documents(documents=documents, ids=uuids)
+
+        for item in focus_items:
+            item.in_vector_store = True
+
+        print("Added focus items to vector store:", ids)
+        return focus_items
+    except Exception as e:
+        traceback.print_exc()
+        print(f"Error adding documents to Chroma: {e}")
+        return None
 
 
 def create_focus_items(
@@ -34,19 +53,17 @@ def create_focus_items(
             )
             for item in focus_items
         ]
+
+        created_items_vector = add_focus_items_to_vector_store(session=session, focus_items=created_items)
+        if created_items_vector:
+            session.add_all(created_items_vector)
+            session.flush()
+            session.commit()
+            return created_items_vector
+
         session.add_all(created_items)
         session.flush()
         session.commit()
-
-        try:
-            documents = [Document(page_content=item.text, metadata=item.to_json()) for item in created_items]
-            uuids = [str(uuid.uuid4()) for _ in range(len(documents))]
-            ids = chroma.vector_store.add_documents(documents=documents, ids=uuids)
-            print("chroma ids", ids)
-        except Exception as e:
-            traceback.print_exc()
-            print(f"Error adding documents to Chroma: {e}")
-
         return created_items
     except Exception as e:
         print(f"Error creating focus items: {e}")

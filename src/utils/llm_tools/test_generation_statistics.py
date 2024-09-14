@@ -1,6 +1,6 @@
 import pytest
 
-from src.utils.generation_statistics import GenerationStatistics
+from src.utils.llm_tools.generation_statistics import GenerationStatistics
 
 
 def test_init():
