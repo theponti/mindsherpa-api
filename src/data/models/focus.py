@@ -5,7 +5,7 @@ from typing import Optional
 
 import pydantic
 from langchain.pydantic_v1 import BaseModel, Field
-from sqlalchemy import UUID, ForeignKey, Integer, String
+from sqlalchemy import UUID, Boolean, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, Session, mapped_column
 from sqlalchemy.types import DateTime
 
@@ -105,6 +105,7 @@ class Focus(Base):
     task_size: Mapped[str] = mapped_column(String, nullable=False, default="medium")
     text: Mapped[str] = mapped_column(nullable=False)
     type: Mapped[str] = mapped_column(nullable=False, default="task")
+    in_vector_store: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Relationships
     profile_id: Mapped[uuid.UUID] = mapped_column(UUID, ForeignKey("profiles.id"), nullable=False)

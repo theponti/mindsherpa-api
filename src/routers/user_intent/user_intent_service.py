@@ -1,4 +1,3 @@
-import json
 import uuid
 from datetime import datetime
 from typing import Any, List, Optional, Tuple
@@ -178,7 +177,6 @@ def get_create_tasks(intermediate_steps) -> CreateIntentsResponse | None:
     if create_task[0].tool_input is None:
         return None
 
-    print("input", json.dumps(create_task[0].tool_input, indent=4))
     return CreateIntentsResponse(
         input={
             "tasks": create_task[0].tool_input["tasks"],  # type: ignore
