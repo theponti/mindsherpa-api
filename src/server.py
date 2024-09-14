@@ -6,7 +6,6 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
 from src.crons import scheduler
-from src.crons.add_focus_to_chroma import add_focus_to_vector_store_job
 from src.routers.ai_router import ai_router
 from src.routers.chat_router import chat_router
 from src.routers.sherpa_router import sherpa_router
@@ -16,12 +15,7 @@ from src.routers.user_router import user_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Start the scheduler in a separate thread to avoid blocking the main thread
-    print("Starting scheduler")
     scheduler.start()
-    scheduler.add_job(add_focus_to_vector_store_job, "interval", minutes=1)
-    # scheduler_thread = threading.Thread(target=start_scheduler)
-    # scheduler_thread.start()
     yield
     scheduler.shutdown()
 
