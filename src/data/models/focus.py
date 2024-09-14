@@ -132,18 +132,22 @@ class Focus(Base):
 
     def to_json(self):
         return {
-            "id": self.id,
-            "text": self.text,
-            "type": self.type,
-            "task_size": self.task_size,
-            "category": self.category,
-            "priority": self.priority,
-            "profile_id": str(self.profile_id),
-            "sentiment": self.sentiment,
-            "state": str(self.state),
-            "due_date": self.due_date.isoformat() if self.due_date else None,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            key: value
+            for key, value in {
+                "id": self.id,
+                "text": self.text,
+                "type": self.type,
+                "task_size": self.task_size,
+                "category": self.category,
+                "priority": self.priority,
+                "profile_id": str(self.profile_id) if self.profile_id else None,
+                "sentiment": self.sentiment,
+                "state": str(self.state) if self.state else None,
+                "due_date": self.due_date.isoformat() if self.due_date else None,
+                "created_at": self.created_at.isoformat() if self.created_at else None,
+                "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            }.items()
+            if value is not None
         }
 
 

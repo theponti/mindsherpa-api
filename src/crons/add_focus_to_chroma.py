@@ -16,7 +16,7 @@ def add_focus_to_vector_store_job():
             print("No new focus items to add to the vector store.")
             return
 
-        focus_items = add_focus_items_to_vector_store(session=session, focus_items=focus_items)
+        focus_items = add_focus_items_to_vector_store(focus_items=focus_items)
         if not focus_items:
             return
 

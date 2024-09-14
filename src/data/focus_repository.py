@@ -15,7 +15,10 @@ from src.services import chroma
 NON_TASK_TYPES = ["chat", "feeling", "request", "question"]
 
 
-def add_focus_items_to_vector_store(session: Session, focus_items: List[Focus]) -> List[Focus] | None:
+def add_focus_items_to_vector_store(focus_items: List[Focus]) -> List[Focus] | None:
+    if not focus_items or len(focus_items) == 0:
+        return None
+
     try:
         documents = [Document(page_content=item.text, metadata=item.to_json()) for item in focus_items]
         uuids = [str(uuid.uuid4()) for _ in range(len(documents))]
@@ -54,7 +57,7 @@ def create_focus_items(
             for item in focus_items
         ]
 
-        created_items_vector = add_focus_items_to_vector_store(session=session, focus_items=created_items)
+        created_items_vector = add_focus_items_to_vector_store(focus_items=created_items)
         if created_items_vector:
             session.add_all(created_items_vector)
             session.flush()
