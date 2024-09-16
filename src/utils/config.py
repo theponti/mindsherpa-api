@@ -1,5 +1,5 @@
 import secrets
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Optional
 
 from pydantic import (
     AnyUrl,
@@ -40,7 +40,7 @@ class _Settings(BaseSettings):
     CHROMA_SERVER_AUTHN_PROVIDER: str
     CHROMA_SERVER_AUTHN_CREDENTIALS: str
     CHROMA_SERVER_HOST: str
-    CHROMA_SERVER_HTTP_PORT: int
+    CHROMA_SERVER_HTTP_PORT: Optional[int] = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
