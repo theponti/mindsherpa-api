@@ -7,7 +7,17 @@ from src.utils.config import settings
 
 chroma_client = None
 
-if settings.ENVIRONMENT != "test" and not settings.CI:
+
+if settings.ENVIRONMENT == "production" and not settings.CI:
+    chroma_client = chromadb.HttpClient(
+        host=settings.CHROMA_SERVER_HOST,
+        settings=Settings(
+            chroma_server_auth_provider=settings.CHROMA_SERVER_AUTHN_PROVIDER,
+            chroma_server_auth_credentials=settings.CHROMA_SERVER_AUTHN_CREDENTIALS,
+            chroma_auth_token_transport_header=settings.CHROMA_AUTH_TOKEN_TRANSPORT_HEADER,
+        ),
+    )
+if settings.ENVIRONMENT != "test" and not settings.CI and settings.CHROMA_SERVER_HTTP_PORT:
     chroma_client = chromadb.HttpClient(
         host=settings.CHROMA_SERVER_HOST,
         port=settings.CHROMA_SERVER_HTTP_PORT,
