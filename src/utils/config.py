@@ -37,8 +37,8 @@ class _Settings(BaseSettings, extra="allow"):
 
     # Chroma
     CHROMA_AUTH_TOKEN_TRANSPORT_HEADER: str
-    CHROMA_SERVER_AUTHN_PROVIDER: str
-    CHROMA_SERVER_AUTHN_CREDENTIALS: str
+    CHROMA_SERVER_AUTH_PROVIDER: str
+    CHROMA_SERVER_AUTH_CREDENTIALS: str
     CHROMA_SERVER_HOST: str
     CHROMA_SERVER_HTTP_PORT: Optional[int] = None
 

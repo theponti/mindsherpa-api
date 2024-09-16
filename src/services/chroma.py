@@ -12,8 +12,8 @@ if settings.ENVIRONMENT == "production" and not settings.CI:
     chroma_client = chromadb.HttpClient(
         host=settings.CHROMA_SERVER_HOST,
         settings=Settings(
-            chroma_server_auth_provider=settings.CHROMA_SERVER_AUTHN_PROVIDER,
-            chroma_server_auth_credentials=settings.CHROMA_SERVER_AUTHN_CREDENTIALS,
+            chroma_server_auth_provider=settings.CHROMA_SERVER_AUTH_PROVIDER,
+            chroma_server_auth_credentials=settings.CHROMA_SERVER_AUTH_CREDENTIALS,
             chroma_auth_token_transport_header=settings.CHROMA_AUTH_TOKEN_TRANSPORT_HEADER,
         ),
     )
@@ -24,8 +24,8 @@ if settings.ENVIRONMENT != "test" and not settings.CI and settings.CHROMA_SERVER
         settings=Settings(
             chroma_server_host=settings.CHROMA_SERVER_HOST,
             chroma_server_http_port=settings.CHROMA_SERVER_HTTP_PORT,
-            chroma_client_auth_provider=settings.CHROMA_SERVER_AUTHN_PROVIDER,
-            chroma_client_auth_credentials=settings.CHROMA_SERVER_AUTHN_CREDENTIALS,
+            chroma_client_auth_provider=settings.CHROMA_SERVER_AUTH_PROVIDER,
+            chroma_client_auth_credentials=settings.CHROMA_SERVER_AUTH_CREDENTIALS,
             chroma_auth_token_transport_header=settings.CHROMA_AUTH_TOKEN_TRANSPORT_HEADER,
         ),
     )

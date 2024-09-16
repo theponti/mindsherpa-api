@@ -11,8 +11,8 @@ env:
   CHROMA_AUTH_TOKEN_TRANSPORT_HEADER: X-Chroma-Token
   CHROMA_SERVER_HOST: chroma
   CHROMA_SERVER_HTTP_PORT: 8000
-  CHROMA_SERVER_AUTHN_CREDENTIALS: test-token
-  CHROMA_SERVER_AUTHN_PROVIDER: chromadb.auth.token_authn.TokenAuthClientProvider
+  CHROMA_SERVER_AUTH_CREDENTIALS: test-token
+  CHROMA_SERVER_AUTH_PROVIDER: chromadb.auth.token_authn.TokenAuthClientProvider
   DATABASE_URL: postgresql://postgres:postgres@localhost:5434/test_db
   ENVIRONMENT: test
   GROQ_API_KEY: fake_groq_api_key
