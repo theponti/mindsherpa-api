@@ -18,7 +18,7 @@ def parse_cors(v: Any) -> list[str] | str:
     raise ValueError(v)
 
 
-class _Settings(BaseSettings):
+class _Settings(BaseSettings, extra="allow"):
     API_V1_STR: str = "/api/v1"
     CI: bool | None = None
     SECRET_KEY: str = secrets.token_urlsafe(32)
