@@ -7,7 +7,7 @@ from langchain_core.documents import Document
 from sqlalchemy.orm import Session
 
 from src.data.db import SessionLocal
-from src.data.models.focus import Focus, FocusItem, FocusItemBase, FocusItemBaseV2, FocusState
+from src.data.models.focus import Focus, FocusItemBase, FocusItemBaseV2, FocusState
 from src.services import chroma
 
 # Crons
@@ -20,6 +20,7 @@ def add_focus_items_to_vector_store(focus_items: List[Focus]) -> List[Focus] | N
         return None
 
     try:
+        print(f"Adding {len(focus_items)} focus items to vector store...")
         documents = [Document(page_content=item.text, metadata=item.to_json()) for item in focus_items]
         uuids = [str(uuid.uuid4()) for _ in range(len(documents))]
         ids = chroma.vector_store.add_documents(documents=documents, ids=uuids)
@@ -27,7 +28,7 @@ def add_focus_items_to_vector_store(focus_items: List[Focus]) -> List[Focus] | N
         for item in focus_items:
             item.in_vector_store = True
 
-        print("Added focus items to vector store:", ids)
+        print(f"Added focus {len(ids)} items to vector store:", ids)
         return focus_items
     except Exception as e:
         traceback.print_exc()
@@ -79,11 +80,13 @@ def search_focus_items(
     due_after: Optional[datetime],
     due_before: Optional[datetime],
     status: Optional[FocusState],
-) -> List[FocusItem]:
+    profile_id: uuid.UUID,
+) -> List[Focus]:
     session = SessionLocal()
     ids = []
+
     if len(keyword) > 0:
-        results = chroma.vector_store.similarity_search(keyword)
+        results = chroma.vector_store.similarity_search(query=keyword, filter={"profile_id": str(profile_id)})
         ids = [res.metadata["id"] for res in results]
 
     try:
@@ -92,23 +95,25 @@ def search_focus_items(
         if len(ids) > 0:
             query = query.filter(Focus.id.in_(ids))
 
-        if due_on is not None:
-            query.filter(Focus.due_date == due_on)
+        if due_on:
+            query = query.filter(Focus.due_date == due_on)
         else:
+            # `due_after` and `due_before` can be used together because
+            # the user may want to search for tasks that are due between two dates
             if due_after is not None:
                 query = query.filter(Focus.due_date >= due_after)
 
             if due_before is not None:
                 query = query.filter(Focus.due_date <= due_before)
 
-        if status == "active" or status == "backlog":
+        if status == "active" or status == FocusState.backlog.value:
             query = query.filter(Focus.state.in_([FocusState.backlog.value, FocusState.active.value]))
         elif status:
             query = query.filter(Focus.state == status.value)
 
         focus_items = query.all()
 
-        return [focus_item.to_model() for focus_item in focus_items]
+        return focus_items
     except Exception as e:
         print(f"Error searching focus items: {e}")
         return []

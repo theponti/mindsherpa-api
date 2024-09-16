@@ -8,17 +8,17 @@ from src.utils.config import settings
 chroma_client = None
 
 if settings.ENVIRONMENT != "test" and not settings.CI:
-    chroma_client = chromadb.Client(
+    chroma_client = chromadb.HttpClient(
+        host=settings.CHROMA_SERVER_HOST,
+        port=settings.CHROMA_SERVER_HTTP_PORT,
         settings=Settings(
+            chroma_server_host=settings.CHROMA_SERVER_HOST,
+            chroma_server_http_port=settings.CHROMA_SERVER_HTTP_PORT,
             chroma_client_auth_provider=settings.CHROMA_SERVER_AUTHN_PROVIDER,
             chroma_client_auth_credentials=settings.CHROMA_SERVER_AUTHN_CREDENTIALS,
+            chroma_auth_token_transport_header=settings.CHROMA_AUTH_TOKEN_TRANSPORT_HEADER,
         ),
     )
-
-    chroma_client.heartbeat()  # this should work with or without authentication - it is a public endpoint
-    chroma_client.get_version()  # this should work with or without authentication - it is a public endpoint
-    chroma_client.list_collections()  # this is a protected endpoint and requires authentication
-
 
 if chroma_client:
     vector_store = Chroma(

@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import datetime
 from typing import Any, List, Optional, Tuple
@@ -59,19 +60,29 @@ def create_tasks(
 @tool("search_tasks")
 def search_tasks(
     keyword: str,
-    due_on: Optional[datetime],
-    due_after: Optional[datetime],
-    due_before: Optional[datetime],
-    status: Optional[FocusState],
+    profile_id: uuid.UUID = Field(description="The user's Profile ID"),
+    due_on: Optional[datetime] = Field(description="The due date for the task", default=None),
+    due_after: Optional[datetime] = Field(
+        description="This is used when the users wants to search for tasks after a specific date",
+        default=None,
+    ),
+    due_before: Optional[datetime] = Field(
+        description="This is used when the users wants to search for tasks before a specific date",
+        default=None,
+    ),
+    status: Optional[FocusState] = Field(description="The status of the task"),
 ) -> List[FocusItem]:
     """Search for tasks based on a keyword or specific attributes."""
-    return search_focus_items(
+    focus_items = search_focus_items(
         keyword=keyword,
         due_on=due_on,
         due_after=due_after,
         due_before=due_before,
         status=status,
+        profile_id=profile_id,
     )
+
+    return [focus_item.to_model() for focus_item in focus_items]
 
 
 @tool("edit_task")
@@ -124,12 +135,17 @@ def get_user_intent(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
     return result
 
 
-class SearchIntentParameters(TypedDict):
+class SearchIntentParameters(pydantic.BaseModel):
     keyword: str
-    due_on: Optional[datetime]
-    due_after: Optional[datetime]
-    due_before: Optional[datetime]
-    status: Optional[str]
+    profile_id: uuid.UUID
+    due_on: Optional[datetime] | None = pydantic.Field(None, description="The due date for the task")
+    due_after: Optional[datetime] | None = pydantic.Field(
+        None, description="This is used when the users wants to search for tasks after a specific date"
+    )
+    due_before: Optional[datetime] | None = pydantic.Field(
+        None, description="This is used when the users wants to search for tasks before a specific date"
+    )
+    status: Optional[str] | None = pydantic.Field(None, description="The status of the task")
 
 
 class SearchIntentsResponse(pydantic.BaseModel):
@@ -149,6 +165,7 @@ def get_search_tasks(intermediate_steps) -> SearchIntentsResponse | None:
     if search_task[0].tool_input is None:
         return None
 
+    print(json.dumps(search_task[0].tool_input, indent=4))
     return SearchIntentsResponse(
         input=search_task[0].tool_input,  # type: ignore
         output=search_tasks[0][1],
@@ -196,9 +213,6 @@ def generate_intent_result(intent) -> GeneratedIntentsResponse:
     steps = intent["intermediate_steps"]
     output = intent["output"]
     search_output = get_search_tasks(steps)
-
-    if search_output and len(search_output.output) > 0:
-        output = None
 
     return GeneratedIntentsResponse(
         output=output,

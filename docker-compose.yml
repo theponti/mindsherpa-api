@@ -25,7 +25,6 @@ services:
       - SUPABASE_KEY
       - GROQ_API_KEY
       - OPENAI_API_KEY
-      - CHROMA_PUBLIC_URL
       - CHROMA_SERVER_AUTHN_CREDENTIALS
       - CHROMA_SERVER_AUTHN_PROVIDER
     command: uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000

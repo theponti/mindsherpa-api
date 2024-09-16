@@ -73,7 +73,7 @@ async def handle_text_input_route(
         if isinstance(e, HTTPException):
             raise e
         print(e)
-        logger.error(f"Error creating focus items: {e}")
+        logger.error(f"Error generating user intent: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 

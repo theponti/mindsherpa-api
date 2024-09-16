@@ -36,9 +36,11 @@ class _Settings(BaseSettings):
     OPENAI_API_KEY: str
 
     # Chroma
+    CHROMA_AUTH_TOKEN_TRANSPORT_HEADER: str
     CHROMA_SERVER_AUTHN_PROVIDER: str
     CHROMA_SERVER_AUTHN_CREDENTIALS: str
-    CHROMA_PUBLIC_URL: str
+    CHROMA_SERVER_HOST: str
+    CHROMA_SERVER_HTTP_PORT: int
 
     @computed_field  # type: ignore[prop-decorator]
     @property
