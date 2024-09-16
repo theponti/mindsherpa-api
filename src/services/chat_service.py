@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from src.data.models.user import User
 from src.data.users_repository import get_user_context
-from src.services.groq_service import groq_chat
+from src.services.openai_service import openai_chat
 from src.services.prompt_service import AvailablePrompts, get_prompt
 from src.utils.logger import logger
 
@@ -53,11 +53,10 @@ def get_chat_response(session: Session, message: str, profile_id: uuid.UUID, use
             ]
         )
 
-        chain = {"user_input": RunnablePassthrough()} | prompt | groq_chat
+        chain = {"user_input": RunnablePassthrough()} | prompt | openai_chat
 
         llm_response = chain.invoke({"user_input": message})
 
-        logger.info("LLM Metadata", llm_response.response_metadata)
         if isinstance(llm_response.content, str):
             try:
                 parsed = parser.parse(llm_response.content)
