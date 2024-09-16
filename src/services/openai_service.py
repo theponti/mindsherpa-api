@@ -8,13 +8,16 @@ from openai import AsyncOpenAI, OpenAI
 
 from src.utils.config import settings
 
+GPT4o = "gpt-4o-2024-08-06"
+GPT4o_mini = "gpt-4o-mini"
+
 OPENAI_API_KEY = settings.OPENAI_API_KEY
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 openai_async_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
-openai_chat = ChatOpenAI(model="gpt-4o-2024-08-06", temperature=0.2, api_key=SecretStr(OPENAI_API_KEY))
+openai_chat = ChatOpenAI(model=GPT4o_mini, temperature=0.2, api_key=SecretStr(OPENAI_API_KEY))
 
 openai_embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
 

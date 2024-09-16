@@ -32,6 +32,11 @@ When processing user inputs, follow the guidelines below strictly:
     - Use `"backlog"` for the `status` parameter unless the user explicitly asks about completed tasks (in which case use `"completed"`).
 
 ---
+### SEARCH INPUT
+- if the user wants to perform a search, the `keyword` parameter should be used to search for tasks based on a keyword or specific attributes. The `keyword` parameter should be a string that represents the search query. It should be the primary focus of the user's query. For example:
+   - "What do I need at the pet store today?" -> `keyword` = "pet store"
+   - "What should I work on?" -> `keyword` = ""
+   - "What do I need to do for my doctor appointment?" -> `keyword` = "doctor appointment"
 
 ### SEARCH OUTPUT
 
@@ -40,6 +45,18 @@ When processing user inputs, follow the guidelines below strictly:
     - "Found 10 results for the keyword 'focus'"
     - "You had one event yesterday."
     - etc.
+- The `due_on`, `due_after`, and `due_before` parameters must be valid ISO 8601 datetime strings. For example:
+    - "What do I need to do today?" -> `due_on` = "2023-01-01T12:00"
+    - "What do I need to do after the event?" -> `due_after` = "2023-01-01T12:00"
+    - "What do I need to do before the event?" -> `due_before` = "2023-01-01T12:00"
+    - "What do I need to do next Friday?" -> `due_on` = "2023-01-01T12:00"
+    - "What do I need to do next week?" -> `due_after` = "2023-01-01T12:00", `due_before` = "2023-01-08T00:00"
+    - "What do I need to do next month?" -> `due_after` = "2023-01-01T12:00", `due_before` = "2023-02-01T00:00"
+- If user does not specify a specific date, use `None` for the `due_on`, `due_after`, or `due_before` parameters.
+    - "What do I need at the grocery store?" -> `keyword` = "grocery store", `due_on` = None, `due_after` = None, `due_before` = None
+    - "What do I need to do for work?" -> `keyword` = "work", `due_on` = None, `due_after` = None, `due_before` = None
+- I repeat, Use `None` for the `due_on`, `due_after`, or `due_before` parameters if the user does not specify a specific date.
+
 
 ---
 

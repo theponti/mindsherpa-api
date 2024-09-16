@@ -43,14 +43,18 @@ class IntentOutput(pydantic.BaseModel):
 
 @tool("create_tasks")
 def create_tasks(
-    profile_id: uuid.UUID = Field(description="The user's Profile ID"),
-    tasks: List[FocusItemBase] = Field(description="An array of tasks to be added to the list"),
+    profile_id: uuid.UUID,
+    tasks: List[FocusItemBase],
 ) -> List[FocusItem]:
     """
     This tool is used to create to-do list items for the user.
 
     This tool should only be used for items that can be completed. Anything else should should
     use the `chat` tool.
+
+    Args:
+        profile_id (uuid.UUID): The user's Profile ID
+        tasks (List[FocusItemBase]): An array of tasks to be added to the list
     """
     session = SessionLocal()
     created_items = create_focus_items(focus_items=tasks, session=session, profile_id=profile_id)
@@ -60,19 +64,23 @@ def create_tasks(
 @tool("search_tasks")
 def search_tasks(
     keyword: str,
-    profile_id: uuid.UUID = Field(description="The user's Profile ID"),
-    due_on: Optional[datetime] = Field(description="The due date for the task", default=None),
-    due_after: Optional[datetime] = Field(
-        description="This is used when the users wants to search for tasks after a specific date",
-        default=None,
-    ),
-    due_before: Optional[datetime] = Field(
-        description="This is used when the users wants to search for tasks before a specific date",
-        default=None,
-    ),
-    status: Optional[FocusState] = Field(description="The status of the task"),
+    profile_id: uuid.UUID,
+    due_on: Optional[datetime],
+    due_after: Optional[datetime],
+    due_before: Optional[datetime],
+    status: Optional[FocusState],
 ) -> List[FocusItem]:
-    """Search for tasks based on a keyword or specific attributes."""
+    """
+    Search for tasks based on a keyword or specific attributes.
+
+    Args:
+        keyword (str): The keyword to search for tasks
+        profile_id (uuid.UUID): The user's Profile ID
+        due_on (Optional[datetime]): The due date in ISO Date Time Format for the task. Example: "2023-01-01T12:00" | None
+        due_after (Optional[datetime]): A ISO Date Time Format date used when the users wants to search for tasks after a specific date. Example: "2023-01-01T12:00" | None
+        due_before (Optional[datetime]): A ISO Date Time Format date used when the users wants to search for tasks before a specific date. Example: "2023-01-01T12:00" | None
+        status (Optional[FocusState]): The status of the task
+    """
     focus_items = search_focus_items(
         keyword=keyword,
         due_on=due_on,
@@ -87,18 +95,27 @@ def search_tasks(
 
 @tool("edit_task")
 def edit_task(task_query: str, new_task_name: str, new_due_date: str, new_status: str) -> bool:
-    """Edit an existing task in a task list"""
+    """
+    Edit an existing task in a task list
+
+    Args:
+        task_query (str): The task query to search for the task to be edited
+        new_task_name (str): The new name or description of the task
+        new_due_date (str): The new due date in ISO Date Time Format for the task
+        new_status (str): The updated status of the task
+    """
     return True
 
 
 @tool("chat")
-def start_chat(
-    user_message: str = Field(description="The user's message"),
-) -> str:
+def start_chat(user_message: str) -> str:
     """
     This tool is used to begin a chat with the user.
 
     This should be used if the user says something that does not match any of the other tools.
+
+    Args:
+        user_message (str): The user's message
     """
     return user_message
 
@@ -138,12 +155,16 @@ def get_user_intent(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
 class SearchIntentParameters(pydantic.BaseModel):
     keyword: str
     profile_id: uuid.UUID
-    due_on: Optional[datetime] | None = pydantic.Field(None, description="The due date for the task")
+    due_on: Optional[datetime] | None = pydantic.Field(
+        None, description="The due date in ISO Date Time Format for the task"
+    )
     due_after: Optional[datetime] | None = pydantic.Field(
-        None, description="This is used when the users wants to search for tasks after a specific date"
+        None,
+        description="A ISO Date Time Format date used when the users wants to search for tasks after a specific date",
     )
     due_before: Optional[datetime] | None = pydantic.Field(
-        None, description="This is used when the users wants to search for tasks before a specific date"
+        None,
+        description="A ISO Date Time Format date used when the users wants to search for tasks before a specific date",
     )
     status: Optional[str] | None = pydantic.Field(None, description="The status of the task")
 

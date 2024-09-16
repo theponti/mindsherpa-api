@@ -9,8 +9,7 @@ from sqlalchemy.orm import Session
 from src.data.db import SessionLocal
 from src.data.models.focus import Focus, FocusItemBase, FocusItemBaseV2, FocusState
 from src.services import chroma
-
-# Crons
+from src.utils.logger import logger
 
 NON_TASK_TYPES = ["chat", "feeling", "request", "question"]
 
@@ -88,6 +87,7 @@ def search_focus_items(
     if len(keyword) > 0:
         results = chroma.vector_store.similarity_search(query=keyword, filter={"profile_id": str(profile_id)})
         ids = [res.metadata["id"] for res in results]
+        logger.info(f"\n\nFound {len(ids)} results for the keyword '{keyword}'\n\n")
 
     try:
         query = session.query(Focus)
