@@ -8,12 +8,12 @@ from pydantic import BaseModel, StringConstraints, ValidationError
 
 from src.data.focus_repository import create_focus_items
 from src.data.models.focus import Focus, FocusItem, FocusItemBaseV2, FocusState
-from src.routers.user_intent.user_intent_service import (
+from src.services.openai_service import openai_client
+from src.services.user_intent.user_intent_service import (
     GeneratedIntentsResponse,
     generate_intent_result,
     get_user_intent,
 )
-from src.services.openai_service import openai_client
 from src.utils.context import CurrentProfile, SessionDep
 from src.utils.logger import logger
 

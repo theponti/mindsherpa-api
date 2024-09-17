@@ -32,6 +32,43 @@ def get_active_chat(db: Session, profile_id: uuid.UUID) -> Chat | None:
     )
 
 
+class StartChatInput(BaseModel):
+    user_message: str
+    sherpa_message: str
+
+
+@chat_router.post("/start")
+async def start_chat(db: SessionDep, profile: CurrentProfile, input: StartChatInput) -> ChatOutput:
+    chat = Chat(
+        title="New Chat",
+        profile_id=profile.id,
+    )
+    db.add(chat)
+    db.commit()
+
+    # Insert initial messages into the database
+    insert_message(
+        session=db,
+        chat_id=chat.id,
+        profile_id=profile.id,
+        message=input.user_message,
+        role=MessageRole.USER.value,
+    )
+    insert_message(
+        session=db,
+        chat_id=chat.id,
+        profile_id=profile.id,
+        message=input.sherpa_message,
+        role=MessageRole.ASSISTANT.value,
+    )
+
+    return ChatOutput(
+        id=chat.id,
+        title=chat.title,
+        created_at=chat.created_at,
+    )
+
+
 @chat_router.get("/active")
 async def get_active_chat_route(
     db: SessionDep,
@@ -91,6 +128,7 @@ async def end_chat(db: SessionDep, user: CurrentUser, input: EndChatPayload) -> 
 
 @chat_router.get("/{chat_id}")
 async def get_chat(db: SessionDep, user: CurrentUser, chat_id: UUID) -> list[MessageOutput] | None:
+    print("chat_id", chat_id)
     chat = db.query(Chat).filter(Chat.id == chat_id).first()
     if chat is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")

@@ -1,4 +1,3 @@
-import json
 import uuid
 from datetime import datetime
 from typing import Any, List, Optional, Tuple
@@ -10,7 +9,6 @@ from langchain_core.prompts import (
     ChatPromptTemplate,
     SystemMessagePromptTemplate,
 )
-from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.tools import tool
 from typing_extensions import Dict, TypedDict
 
@@ -19,21 +17,6 @@ from src.data.focus_repository import create_focus_items, search_focus_items
 from src.data.models.focus import FocusItem, FocusItemBase, FocusItemBaseV2, FocusState
 from src.services.file_service import get_file_contents
 from src.services.openai_service import openai_chat
-
-
-class EditTaskParameters(BaseModel):
-    task_query: str = Field(..., description="A query to search for the task to be edited")
-    new_task_name: Optional[str] = Field(None, description="The new name or description of the task")
-    new_due_date: Optional[datetime] = Field(None, description="The new due date for the task")
-    new_status: Optional[str] = Field(
-        None, description="The updated status of the task", enum=["pending", "completed", "in-progress"]
-    )
-
-
-class EditTaskFunction(BaseModel):
-    name: str = Field("edit_task", description="Edit an existing task in a task list")
-    description: str = Field("Edit an existing task in a task list")
-    parameters: EditTaskParameters
 
 
 class IntentOutput(pydantic.BaseModel):
@@ -121,7 +104,7 @@ def start_chat(user_message: str) -> str:
 
 
 def get_user_intent(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
-    system_prompt = get_file_contents("src/routers/user_intent/user_intent_prompt.md")
+    system_prompt = get_file_contents("src/services/user_intent/user_intent_prompt.md")
     tools = [create_tasks, search_tasks, edit_task, start_chat]
     chat_prompt = ChatPromptTemplate(
         [
@@ -186,7 +169,6 @@ def get_search_tasks(intermediate_steps) -> SearchIntentsResponse | None:
     if search_task[0].tool_input is None:
         return None
 
-    print(json.dumps(search_task[0].tool_input, indent=4))
     return SearchIntentsResponse(
         input=search_task[0].tool_input,  # type: ignore
         output=search_tasks[0][1],
@@ -224,8 +206,37 @@ def get_create_tasks(intermediate_steps) -> CreateIntentsResponse | None:
     )
 
 
+class ChatParameters(TypedDict):
+    user_message: str
+
+
+class ChatResponse(pydantic.BaseModel):
+    input: ChatParameters
+    output: str
+
+
+def get_chat_tool_call(intermediate_steps) -> ChatResponse | None:
+    chat_calls: List[Tuple[AgentAction, str]] = list(
+        filter(lambda x: x[0].tool == "chat", intermediate_steps)
+    )
+
+    if len(chat_calls) == 0:
+        return None
+
+    create_task = chat_calls[0]
+    if create_task[0].tool_input is None:
+        return None
+
+    return ChatResponse(
+        input=create_task[0].tool_input,  # type: ignore
+        output=chat_calls[0][1],
+    )
+
+
 class GeneratedIntentsResponse(pydantic.BaseModel):
+    input: str | None
     output: str | None
+    chat: ChatResponse | None
     create: CreateIntentsResponse | None
     search: SearchIntentsResponse | None
 
@@ -236,7 +247,9 @@ def generate_intent_result(intent) -> GeneratedIntentsResponse:
     search_output = get_search_tasks(steps)
 
     return GeneratedIntentsResponse(
+        input=intent["user_input"],
         output=output,
+        chat=get_chat_tool_call(steps),
         create=get_create_tasks(steps),
         search=search_output,
     )

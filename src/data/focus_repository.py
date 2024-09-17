@@ -90,7 +90,7 @@ def search_focus_items(
         logger.info(f"\n\nFound {len(ids)} results for the keyword '{keyword}'\n\n")
 
     try:
-        query = session.query(Focus)
+        query = session.query(Focus).filter(Focus.profile_id == profile_id)
 
         if len(ids) > 0:
             query = query.filter(Focus.id.in_(ids))

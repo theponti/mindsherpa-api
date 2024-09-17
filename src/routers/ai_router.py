@@ -4,14 +4,14 @@ import uuid
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from src.routers.user_intent.user_intent_service import (
+from src.services.file_service import get_file_contents
+from src.services.openai_service import openai_async_client
+from src.services.sherpa import process_user_input
+from src.services.user_intent.user_intent_service import (
     GeneratedIntentsResponse,
     generate_intent_result,
     get_user_intent,
 )
-from src.services.file_service import get_file_contents
-from src.services.openai_service import openai_async_client
-from src.services.sherpa import process_user_input
 from src.utils.config import settings
 from src.utils.logger import logger
 
