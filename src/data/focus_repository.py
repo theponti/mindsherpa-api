@@ -91,7 +91,10 @@ def search_focus_items(
         )
         ids = []
         for res, score in results:
+            print(f"Found {res.metadata['text']} with score {score}")
             ids.append(res.metadata["id"])
+        if len(ids) == 0:
+            return []
 
     try:
         query = session.query(Focus).filter(Focus.profile_id == profile_id)

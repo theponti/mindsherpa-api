@@ -143,9 +143,9 @@ class Focus(Base):
                 "profile_id": str(self.profile_id) if self.profile_id else None,
                 "sentiment": self.sentiment,
                 "state": str(self.state) if self.state else None,
-                "due_date": self.due_date.isoformat() if self.due_date else None,
-                "created_at": self.created_at.isoformat() if self.created_at else None,
-                "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+                "due_date": self.due_date if self.due_date else None,
+                "created_at": self.created_at if self.created_at else None,
+                "updated_at": self.updated_at if self.updated_at else None,
             }.items()
             if value is not None
         }
