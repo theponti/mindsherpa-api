@@ -27,6 +27,7 @@ dependencies = [
     "chromadb>=0.5.5",
     "langchain-chroma>=0.1.2",
     "apscheduler>=3.10.4",
+    "pinecone[grpc]>=5.3.0",
 ]
 
 [build-system]

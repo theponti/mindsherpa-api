@@ -4,9 +4,10 @@ import uuid
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
+from src.services import chroma_service
 from src.services.file_service import get_file_contents
 from src.services.openai_service import openai_async_client
-from src.services.sherpa import process_user_input
+from src.services.pinecone_service import euclidean_index, pc
 from src.services.user_intent.user_intent_service import (
     GeneratedIntentsResponse,
     generate_intent_result,
@@ -52,15 +53,6 @@ async def stream_chat(message: str = Form(...), dev_env=Depends(depends_on_devel
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
-@ai_router.post("/sherpa/focus")
-def sherpa_focus_item(request: Request, input: str = Form(...), dev_env=Depends(depends_on_development)):
-    if request.query_params.get("test"):
-        test_user_input = get_file_contents("src/prompts/test_user_input.md")
-        return process_user_input(test_user_input)
-    completion = process_user_input(input)
-    return completion
-
-
 @ai_router.post("/sherpa/intent")
 def sherpa_user_intent(
     request: Request,
@@ -99,3 +91,43 @@ def sherpa_user_intent_agent(
     except Exception:  # pylint: disable=broad-except
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@ai_router.post("/sherpa/vector_search")
+def sherpa_vector_search(
+    request: Request,
+    query: str = Form(...),
+    threshold: float = Form(None),
+    profile_id: uuid.UUID = Form(...),
+    dev_env=Depends(depends_on_development),
+):
+    return chroma_service.vector_store.similarity_search_with_relevance_scores(
+        query=query,
+        filter={"profile_id": str(profile_id)},
+        score_threshold=threshold,
+    )
+
+
+@ai_router.post("/sherpa/vector_search/pinecone")
+def sherpa_vector_search_pinecone(
+    request: Request,
+    query: str = Form(...),
+    threshold: float = Form(None),
+    profile_id: uuid.UUID = Form(...),
+    dev_env=Depends(depends_on_development),
+):
+    embedding = pc.inference.embed(
+        model="multilingual-e5-large", inputs=[query], parameters={"input_type": "query"}
+    )
+
+    results = euclidean_index.query(
+        namespace="ns1", vector=embedding[0].values, top_k=3, include_values=False, include_metadata=True
+    )
+
+    return {
+        # "embedding": embedding[0].values,
+        "results": [
+            {"id": result["id"], "text": result["metadata"]["text"], "score": result["score"]}
+            for result in results["matches"]
+        ],
+    }

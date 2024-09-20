@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from src.data.db import SessionLocal
 from src.data.models.focus import Focus, FocusItemBase, FocusItemBaseV2, FocusState
-from src.services import chroma
+from src.services import chroma_service
 
 NON_TASK_TYPES = ["chat", "feeling", "request", "question"]
 
@@ -20,8 +20,8 @@ def add_focus_items_to_vector_store(focus_items: List[Focus]) -> List[Focus] | N
     try:
         print(f"Adding {len(focus_items)} focus items to vector store...")
         documents = [Document(page_content=item.text, metadata=item.to_json()) for item in focus_items]
-        uuids = [str(uuid.uuid4()) for _ in range(len(documents))]
-        ids = chroma.vector_store.add_documents(documents=documents, ids=uuids)
+        uuids = [item.metadata["id"] for item in documents]
+        ids = chroma_service.vector_store.add_documents(documents=documents, ids=uuids)
 
         for item in focus_items:
             item.in_vector_store = True
@@ -31,6 +31,21 @@ def add_focus_items_to_vector_store(focus_items: List[Focus]) -> List[Focus] | N
     except Exception as e:
         traceback.print_exc()
         print(f"Error adding documents to Chroma: {e}")
+        return None
+
+
+def delete_focus_item_from_vector_store(focus_item: Focus):
+    if not focus_item.in_vector_store:
+        return
+
+    try:
+        print(f"Deleting {focus_item.text} from vector store...")
+        chroma_service.vector_store.delete(ids=[str(focus_item.id)])
+        focus_item.in_vector_store = False
+        print(f"Deleted {focus_item.text} from vector store.")
+    except Exception as e:
+        traceback.print_exc()
+        print(f"Error deleting {focus_item.text} from vector store: {e}")
         return None
 
 
@@ -84,10 +99,10 @@ def search_focus_items(
     ids = []
 
     if len(keyword) > 0:
-        results = chroma.vector_store.similarity_search_with_relevance_scores(
+        results = chroma_service.vector_store.similarity_search_with_relevance_scores(
             query=keyword,
             filter={"profile_id": str(profile_id)},
-            score_threshold=0.4,
+            # score_threshold=0.4,
         )
         ids = []
         for res, score in results:

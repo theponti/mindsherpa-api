@@ -69,7 +69,11 @@ class FocusItemBase(BaseModel):
         None,
         description="The deadline for completing the item in YYYY-MM-DDTHH:MM format. Example: due_date: 2023-01-01T12:00",
     )
-    priority: int = Field(ge=1, le=5)
+    priority: int = Field(
+        description="The priority of the item. 1 is the highest priority and 5 is the lowest priority.",
+        ge=1,
+        le=5,
+    )
     sentiment: Sentiment
     task_size: TaskSize
     text: str

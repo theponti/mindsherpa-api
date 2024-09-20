@@ -8,8 +8,8 @@ from fastapi.responses import JSONResponse
 from src.crons import shutdown_scheduler, start_scheduler
 from src.routers.ai_router import ai_router
 from src.routers.chat_router import chat_router
+from src.routers.focus_router import focus_router
 from src.routers.sherpa_router import sherpa_router
-from src.routers.tasks import task_router
 from src.routers.user_router import user_router
 
 
@@ -34,8 +34,8 @@ app.add_middleware(
 
 # Routers
 app.include_router(ai_router)
-app.include_router(sherpa_router, prefix="/notes")
-app.include_router(task_router, prefix="/tasks")
+app.include_router(sherpa_router, prefix="/sherpa")
+app.include_router(focus_router, prefix="/focus")
 app.include_router(chat_router, prefix="/chat")
 app.include_router(user_router, prefix="/user")
 

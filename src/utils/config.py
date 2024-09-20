@@ -42,6 +42,9 @@ class _Settings(BaseSettings, extra="allow"):
     CHROMA_SERVER_HOST: str
     CHROMA_SERVER_HTTP_PORT: Optional[int] = None
 
+    # Pinecone
+    PINECONE_API_KEY: str
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def server_host(self) -> str:
