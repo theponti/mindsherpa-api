@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, Session, mapped_column
 from sqlalchemy.types import DateTime
 
 from src.data.db import Base
+from src.utils.date_tools import date_to_iso
 
 
 class FocusState(Enum):
@@ -127,7 +128,7 @@ class Focus(Base):
             category=self.category,
             priority=self.priority,
             sentiment=self.sentiment,
-            due_date=self.due_date.isoformat() if self.due_date else None,
+            due_date=date_to_iso(self.due_date),
             profile_id=self.profile_id,
             state=self.state,
             created_at=self.created_at,
@@ -138,7 +139,7 @@ class Focus(Base):
         return {
             key: value
             for key, value in {
-                "id": self.id,
+                "id": str(self.id),
                 "text": self.text,
                 "type": self.type,
                 "task_size": self.task_size,
@@ -147,9 +148,9 @@ class Focus(Base):
                 "profile_id": str(self.profile_id) if self.profile_id else None,
                 "sentiment": self.sentiment,
                 "state": str(self.state) if self.state else None,
-                "due_date": self.due_date if self.due_date else None,
-                "created_at": self.created_at if self.created_at else None,
-                "updated_at": self.updated_at if self.updated_at else None,
+                "due_date": date_to_iso(self.due_date),
+                "created_at": date_to_iso(self.created_at),
+                "updated_at": date_to_iso(self.updated_at),
             }.items()
             if value is not None
         }

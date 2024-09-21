@@ -1,4 +1,15 @@
 from datetime import datetime, time
+from typing import Optional
+
+
+def date_to_iso(date: datetime | str | None) -> Optional[str]:
+    if isinstance(date, datetime):
+        return date.isoformat()
+
+    if isinstance(date, str):
+        return date
+
+    return None
 
 
 def get_end_of_today():
