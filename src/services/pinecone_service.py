@@ -1,45 +1,30 @@
-import time
-
+from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone
 
 from src.data.db import SessionLocal
+from src.data.focus_repository import get_focus_vector_documents
 from src.data.models.focus import Focus
+from src.services.openai_service import openai_embeddings
 from src.utils.config import settings
 
 pc = Pinecone(api_key=settings.PINECONE_API_KEY)
 
-euclidean_index_name = "mindsherpa-dev-eclidean"
-index_name = "mindsherpa-focus"
+focus_index = "mindsherpa-focus"
 
-euclidean_index = pc.Index(euclidean_index_name)
-focus_index = pc.Index(index_name)
+vector_store = PineconeVectorStore(index=focus_index, embedding=openai_embeddings)
 
 
 def upsert_focus_to_pinecone():
     session = SessionLocal()
     focus_items = session.query(Focus).filter(Focus.in_vector_store.is_(False)).all()
 
+    documents = get_focus_vector_documents(focus_items)
     data = [{"id": str(focus_item.id), "text": focus_item.text} for focus_item in focus_items]
 
     if len(data) == 0:
         return
 
-    inputs = [d["text"] for d in data]
-    embeddings = pc.inference.embed(
-        model="multilingual-e5-large",
-        inputs=inputs,
-        parameters={"input_type": "passage", "truncate": "END"},
-    )
-
-    # Wait for the index to be ready
-    while not pc.describe_index(euclidean_index_name).status["ready"]:
-        time.sleep(1)
-
-    vectors = []
-    for d, e in zip(data, embeddings):
-        vectors.append({"id": d["id"], "values": e["values"], "metadata": {"text": d["text"]}})
-
-    euclidean_index.upsert(vectors=vectors, namespace="ns1")
+    vector_store.add_documents(documents=documents, ids=[d["id"] for d in data])
 
     for focus_item in focus_items:
         focus_item.in_vector_store = True

@@ -4,6 +4,7 @@ from typing import List
 from sqlalchemy.orm import Session
 
 from src.data.models import Note
+from src.utils.logger import logger
 
 
 def create_note(session: Session, content: str, profile_id: uuid.UUID) -> Note | None:
@@ -13,7 +14,7 @@ def create_note(session: Session, content: str, profile_id: uuid.UUID) -> Note |
         session.commit()
         return note
     except Exception as e:
-        print(f"Error saving note: {e}")
+        logger.error(f"Error saving note: {e}")
         return None
 
 

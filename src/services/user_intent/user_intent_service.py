@@ -14,7 +14,7 @@ from typing_extensions import Dict, TypedDict
 
 from src.data.db import SessionLocal
 from src.data.focus_repository import create_focus_items, search_focus_items
-from src.data.models.focus import FocusItem, FocusItemBase, FocusItemBaseV2, FocusState
+from src.data.models.focus import FocusItem, FocusItemBaseV2, FocusState, UserIntentCreateTask
 from src.services.file_service import get_file_contents
 from src.services.openai_service import openai_chat
 
@@ -27,7 +27,7 @@ class IntentOutput(pydantic.BaseModel):
 @tool("create_tasks")
 def create_tasks(
     profile_id: uuid.UUID,
-    tasks: List[FocusItemBase],
+    tasks: List[UserIntentCreateTask],
 ) -> List[FocusItem]:
     """
     This tool is used to create to-do list items for the user.

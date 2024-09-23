@@ -128,7 +128,6 @@ async def end_chat(db: SessionDep, user: CurrentUser, input: EndChatPayload) -> 
 
 @chat_router.get("/{chat_id}")
 async def get_chat(db: SessionDep, user: CurrentUser, chat_id: UUID) -> list[MessageOutput] | None:
-    print("chat_id", chat_id)
     chat = db.query(Chat).filter(Chat.id == chat_id).first()
     if chat is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")

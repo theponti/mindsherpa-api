@@ -62,7 +62,7 @@ class Sentiment(str, Enum):
     negative = "negative"
 
 
-class FocusItemBase(BaseModel):
+class UserIntentCreateTask(BaseModel):
     id: str
     category: Category = Field(
         description="Shopping, grocery shopping, fashion, beauty, and personal style. Also includes items related to buying and selling.",

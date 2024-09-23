@@ -1,6 +1,7 @@
 import base64
 import os
 import tempfile
+import traceback
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException
@@ -34,7 +35,7 @@ async def handle_text_input_route(
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
-        print(e)
+        traceback.print_exc()
         logger.error(f"Error generating user intent: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 

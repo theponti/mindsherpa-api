@@ -7,18 +7,24 @@ from src.data.focus_repository import get_focus_item_by_id
 from src.data.models.focus import Focus
 from src.services import chroma_service
 from src.services.keywords.keywords_service import get_query_keywords
+from src.utils.logger import logger
 
 
 def delete_none_ids_from_chroma():
     try:
-        focus_items = chroma_service.focus_collection.get(ids=["None"])
-        print(f"Deleting None IDs from Chroma: {len(focus_items)}")
+        result = chroma_service.focus_collection.get(ids=["None"])
+        documents = result["documents"]
+        if documents:
+            if len(documents) > 0:
+                logger.info("No None IDs to delete from Chroma.")
+                return
 
-        if focus_items:
+            logger.info(f"Deleting None IDs from Chroma: {len(documents)}")
             chroma_service.focus_collection.delete(ids=["None"])
+            logger.info(f"{len(documents)} None IDs deleted from Chroma.")
     except Exception as e:
         traceback.print_exc()
-        print(f"Error deleting None IDs from Chroma: {e}")
+        logger.error(f"Error deleting None IDs from Chroma: {e}")
 
 
 def refresh_focus_from_chroma():
@@ -27,7 +33,7 @@ def refresh_focus_from_chroma():
     try:
         focus_items = session.query(Focus).filter(Focus.in_vector_store.is_(False)).all()
         if not focus_items:
-            print("No focus items to refresh from the vector store.")
+            logger.info("No focus items to refresh from the vector store.")
             return
 
         docs = chroma_service.vector_store.get(ids=[str(focus_item.id) for focus_item in focus_items])
@@ -43,10 +49,10 @@ def refresh_focus_from_chroma():
                 document=Document(metadata=metadata, page_content=f"{page_content} \n\n {keyword_str}"),
             )
             completed_ids.append(doc_id)
-            print(f"Updated {doc_id} with keywords: {keyword_str}")
+            logger.info(f"Updated {doc_id} with keywords: {keyword_str}")
 
         session.query(Focus).filter(Focus.id.in_(completed_ids)).update({"in_vector_store": True})
         session.commit()
     except Exception as e:
         traceback.print_exc()
-        print(f"Error refreshing focus items from vector store: {e}")
+        logger.error(f"Error refreshing focus items from vector store: {e}")

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from src.services import chroma_service
 from src.services.file_service import get_file_contents
 from src.services.keywords.keywords_service import get_query_keywords
-from src.services.pinecone_service import euclidean_index, pc
+from src.services.pinecone_service import vector_store
 from src.services.user_intent.user_intent_service import (
     GeneratedIntentsResponse,
     generate_intent_result,
@@ -14,7 +14,7 @@ from src.services.user_intent.user_intent_service import (
 )
 from src.utils.config import settings
 
-ai_router = APIRouter()
+admin_router = APIRouter()
 
 
 def depends_on_development():
@@ -23,7 +23,7 @@ def depends_on_development():
     return True
 
 
-@ai_router.post("/sherpa/keyword-generator")
+@admin_router.post("/sherpa/keyword-generator")
 def sherpa_keyword_generator(
     request: Request,
     task_description: str = Form(...),
@@ -32,7 +32,7 @@ def sherpa_keyword_generator(
     return get_query_keywords(task_description)
 
 
-@ai_router.post("/sherpa/intent")
+@admin_router.post("/sherpa/intent")
 def sherpa_user_intent(
     request: Request,
     input: str = Form(...),
@@ -46,12 +46,12 @@ def sherpa_user_intent(
     try:
         intents = get_user_intent(content, profile_id=profile_id)
         return intents
-    except Exception as e:
-        print(e)
+    except Exception:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@ai_router.post("/sherpa/intent/formatted")
+@admin_router.post("/sherpa/intent/formatted")
 def sherpa_user_intent_agent(
     request: Request,
     input: str = Form(...),
@@ -72,7 +72,7 @@ def sherpa_user_intent_agent(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@ai_router.get("/sherpa/vector_search/{id}")
+@admin_router.get("/sherpa/vector_search/{id}")
 def get_vector_document_by_id(
     request: Request,
     dev_env=Depends(depends_on_development),
@@ -80,7 +80,7 @@ def get_vector_document_by_id(
     return chroma_service.vector_store.get(ids=[request.path_params["id"]])
 
 
-@ai_router.post("/sherpa/vector_search")
+@admin_router.post("/sherpa/vector_search")
 def sherpa_vector_search(
     request: Request,
     query: str = Form(...),
@@ -95,26 +95,25 @@ def sherpa_vector_search(
     )
 
 
-@ai_router.post("/sherpa/vector_search/pinecone")
+# vector_store.similarity_search_with_score(
+#     "Will it be hot tomorrow?", k=1, filter={"source": "news"}
+# )
+
+
+@admin_router.post("/sherpa/vector_search/pinecone")
 def sherpa_vector_search_pinecone(
-    request: Request,
     query: str = Form(...),
     threshold: float = Form(None),
     profile_id: uuid.UUID = Form(...),
     dev_env=Depends(depends_on_development),
 ):
-    embedding = pc.inference.embed(
-        model="multilingual-e5-large", inputs=[query], parameters={"input_type": "query"}
+    retriever = vector_store.as_retriever(
+        search_type="similarity_score_threshold",
+        search_kwargs={"k": 1, "score_threshold": threshold or 0.5},
     )
 
-    results = euclidean_index.query(
-        namespace="ns1", vector=embedding[0].values, top_k=3, include_values=False, include_metadata=True
-    )
+    results = retriever.invoke(query, filter={"profile_id": str(profile_id)})
 
     return {
-        # "embedding": embedding[0].values,
-        "results": [
-            {"id": result["id"], "text": result["metadata"]["text"], "score": result["score"]}
-            for result in results["matches"]
-        ],
+        "results": [{"id": result.id, "text": result.metadata["text"]} for result in results],
     }

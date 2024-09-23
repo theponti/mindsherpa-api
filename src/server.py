@@ -6,11 +6,12 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
 from src.crons import shutdown_scheduler, start_scheduler
-from src.routers.ai_router import ai_router
+from src.routers.admin_router import admin_router
 from src.routers.chat_router import chat_router
 from src.routers.focus_router import focus_router
 from src.routers.sherpa_router import sherpa_router
 from src.routers.user_router import user_router
+from src.utils.logger import logger
 
 
 @asynccontextmanager
@@ -33,20 +34,11 @@ app.add_middleware(
 )
 
 # Routers
-app.include_router(ai_router)
+app.include_router(admin_router, prefix="/admin")
 app.include_router(sherpa_router, prefix="/sherpa")
 app.include_router(focus_router, prefix="/focus")
 app.include_router(chat_router, prefix="/chat")
 app.include_router(user_router, prefix="/user")
-
-
-@app.exception_handler(ResponseValidationError)
-async def response_validation_exception_handler(request, exc):
-    content = {
-        "detail": exc.errors(),
-    }
-    print(content)
-    return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content=content)
 
 
 @app.exception_handler(RequestValidationError)
@@ -54,7 +46,16 @@ async def request_validation_exception_handler(request, exc):
     content = {
         "detail": exc.errors(),
     }
-    print(content)
+    logger.error("Request Validation Error:", content)
+    return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content=content)
+
+
+@app.exception_handler(ResponseValidationError)
+async def response_validation_exception_handler(request, exc):
+    content = {
+        "detail": exc.errors(),
+    }
+    logger.error("Response Validation Error:", content)
     return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content=content)
 
 

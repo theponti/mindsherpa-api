@@ -7,10 +7,33 @@ from langchain_core.documents import Document
 from sqlalchemy.orm import Session
 
 from src.data.db import SessionLocal
-from src.data.models.focus import Focus, FocusItemBase, FocusState
+from src.data.models.focus import Focus, FocusState, UserIntentCreateTask
 from src.services import chroma_service
+from src.utils.logger import logger
 
 NON_TASK_TYPES = ["chat", "feeling", "request", "question"]
+
+
+def get_focus_vector_documents(
+    focus_items: List[Focus], base_items: Optional[List[UserIntentCreateTask]] = None
+) -> List[Document]:
+    documents: List[Document] = []
+
+    for item in focus_items:
+        if base_items:
+            keywords = next(base_item for base_item in base_items if base_item.text == item.text).keywords
+            keywords_str = ",".join(keywords)
+        else:
+            keywords_str = ""
+
+        documents.append(
+            Document(
+                page_content=f"{item.text} \n\n {keywords_str}",
+                metadata=item.to_json(),
+            )
+        )
+
+    return documents
 
 
 def get_focus_item_by_id(focus_items: List[Focus], id: str) -> Focus:
@@ -19,24 +42,14 @@ def get_focus_item_by_id(focus_items: List[Focus], id: str) -> Focus:
 
 
 def add_focus_items_to_vector_store(
-    focus_items: List[Focus], base_items: List[FocusItemBase]
+    focus_items: List[Focus], base_items: List[UserIntentCreateTask]
 ) -> List[Focus] | None:
     try:
-        documents: List[Document] = []
-        for item in focus_items:
-            keywords = next(base_item for base_item in base_items if base_item.text == item.text).keywords
-            keywords_str = ",".join(keywords)
-            documents.append(
-                Document(
-                    page_content=f"{item.text} \n\n {keywords_str}",
-                    metadata=item.to_json(),
-                )
-            )
-
-        print(f"Adding {len(documents)} focus items to vector store...")
+        documents = get_focus_vector_documents(focus_items, base_items)
+        logger.info(f"Adding {len(documents)} focus items to vector store...")
         uuids = [item.metadata["id"] for item in documents]
         ids = chroma_service.vector_store.add_documents(documents=documents, ids=uuids)
-        print(f"Added focus {len(ids)} items to vector store:", ids)
+        logger.info(f"Added focus {len(ids)} items to vector store:", {"ids": ids})
 
         for item in focus_items:
             item.in_vector_store = True
@@ -44,7 +57,7 @@ def add_focus_items_to_vector_store(
         return focus_items
     except Exception as e:
         traceback.print_exc()
-        print(f"Error adding documents to Chroma: {e}")
+        logger.error(f"Error adding documents to Chroma: {e}")
         return None
 
 
@@ -53,18 +66,18 @@ def delete_focus_item_from_vector_store(focus_item: Focus):
         return
 
     try:
-        print(f"Deleting {focus_item.id} from vector store...")
+        logger.info(f"Deleting {focus_item.id} from vector store...")
         chroma_service.vector_store.delete(ids=[str(focus_item.id)])
         focus_item.in_vector_store = False
-        print(f"Deleted {focus_item.id} from vector store.")
+        logger.info(f"Deleted {focus_item.id} from vector store.")
     except Exception as e:
         traceback.print_exc()
-        print(f"Error deleting {focus_item.text} from vector store: {e}")
+        logger.error(f"Error deleting {focus_item.text} from vector store: {e}")
         return None
 
 
 def create_focus_items(
-    focus_items: List[FocusItemBase], profile_id: uuid.UUID, session: Session
+    focus_items: List[UserIntentCreateTask], profile_id: uuid.UUID, session: Session
 ) -> List[Focus]:
     filtered_items = [item for item in focus_items if item.type not in NON_TASK_TYPES]
     if len(filtered_items) == 0:
@@ -93,7 +106,7 @@ def create_focus_items(
 
         return created_items
     except Exception as e:
-        print(f"Error creating focus items: {e}")
+        logger.error(f"Error creating focus items: {e}")
         return []
 
 
@@ -116,7 +129,7 @@ def search_focus_items(
         )
         ids = []
         for res, score in results:
-            print(f"Found {res.metadata['text']} with score {score}")
+            logger.info(f"Found {res.metadata['text']} with score {score}")
             ids.append(res.metadata["id"])
         if len(ids) == 0:
             return []
@@ -147,5 +160,5 @@ def search_focus_items(
 
         return focus_items
     except Exception as e:
-        print(f"Error searching focus items: {e}")
+        logger.error(f"Error searching focus items: {e}")
         return []

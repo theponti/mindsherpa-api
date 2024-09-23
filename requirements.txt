@@ -391,6 +391,9 @@ langchain-groq==0.1.9 \
 langchain-openai==0.1.23 \
     --hash=sha256:ed7f16671ea0af177ac5f82d5645a746c5097c56f97b31798e5c07b5c84f0eed \
     --hash=sha256:8e3d215803e157f26480c6108eb4333629832b1a0e746723060c24f93b8b78f4
+langchain-pinecone==0.1.3 \
+    --hash=sha256:3fd23929d7d9653aeab9daeff5f324f3472feb0ac541778219fb52efcf9a88f3 \
+    --hash=sha256:de4f88d690b28f629ef9cadb0af9b32819df4bd12171f75495f5339b7d87ae5b
 langchain-text-splitters==0.2.4 \
     --hash=sha256:f7daa7a3b0aa8309ce248e2e2b6fc8115be01118d336c7f7f7dfacda0e89bf29 \
     --hash=sha256:2702dee5b7cbdd595ccbe43b8d38d01a34aa8583f4d6a5a68ad2305ae3e7b645
@@ -634,6 +637,11 @@ packaging==24.1 \
 pinecone==5.3.0 \
     --hash=sha256:287162b063d81bfa9278f7505e7303e77247c9c8c42601bb53397605575e5cff \
     --hash=sha256:7e8b0c582c797d10ca6da7258905ed5095aa1b0e0952b06286c9249a5dc4e97a
+pinecone-client==5.0.1 \
+    --hash=sha256:11c33ff5d1c38a6ce69e69fe532c0f22f312fb28d761bb30b3767816d3181d64 \
+    --hash=sha256:c8f7835e1045ba84e295f217a8e85573ffb80b41501bbc1af6d92c9631c567a7
+pinecone-notebooks==0.1.1 \
+    --hash=sha256:6f5eb0b163fe7d50e3ef61d4fe2e0a6d5c15b762214c5f756979adf7a44f7762
 pinecone-plugin-inference==1.1.0 \
     --hash=sha256:283e5ae4590b901bf2179beb56fc3d1b715e63582f37ec7abb0708cf70912d1f \
     --hash=sha256:32c61aba21c9a28fdcd0e782204c1ca641aeb3fd6e42764fbf0de8186eb657ec
