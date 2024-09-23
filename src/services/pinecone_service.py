@@ -25,9 +25,6 @@ def upsert_focus_to_pinecone():
         return
 
     inputs = [d["text"] for d in data]
-    print(inputs)
-    print(type(inputs))
-    print(type(inputs[0]))
     embeddings = pc.inference.embed(
         model="multilingual-e5-large",
         inputs=inputs,
@@ -50,3 +47,4 @@ def upsert_focus_to_pinecone():
     session.add_all(focus_items)
     session.commit()
     session.flush()
+    session.close()

@@ -7,7 +7,7 @@ from langchain_core.documents import Document
 from sqlalchemy.orm import Session
 
 from src.data.db import SessionLocal
-from src.data.models.focus import Focus, FocusItemBase, FocusItemBaseV2, FocusState
+from src.data.models.focus import Focus, FocusItemBase, FocusState
 from src.services import chroma_service
 
 NON_TASK_TYPES = ["chat", "feeling", "request", "question"]
@@ -18,20 +18,29 @@ def get_focus_item_by_id(focus_items: List[Focus], id: str) -> Focus:
     return focus_item
 
 
-def add_focus_items_to_vector_store(focus_items: List[Focus]) -> List[Focus] | None:
-    if not focus_items or len(focus_items) == 0:
-        return None
-
+def add_focus_items_to_vector_store(
+    focus_items: List[Focus], base_items: List[FocusItemBase]
+) -> List[Focus] | None:
     try:
-        print(f"Adding {len(focus_items)} focus items to vector store...")
-        documents = [Document(page_content=item.text, metadata=item.to_json()) for item in focus_items]
+        documents: List[Document] = []
+        for item in focus_items:
+            keywords = next(base_item for base_item in base_items if base_item.text == item.text).keywords
+            keywords_str = ",".join(keywords)
+            documents.append(
+                Document(
+                    page_content=f"{item.text} \n\n {keywords_str}",
+                    metadata=item.to_json(),
+                )
+            )
+
+        print(f"Adding {len(documents)} focus items to vector store...")
         uuids = [item.metadata["id"] for item in documents]
         ids = chroma_service.vector_store.add_documents(documents=documents, ids=uuids)
+        print(f"Added focus {len(ids)} items to vector store:", ids)
 
         for item in focus_items:
             item.in_vector_store = True
 
-        print(f"Added focus {len(ids)} items to vector store:", ids)
         return focus_items
     except Exception as e:
         traceback.print_exc()
@@ -44,10 +53,10 @@ def delete_focus_item_from_vector_store(focus_item: Focus):
         return
 
     try:
-        print(f"Deleting {focus_item.text} from vector store...")
+        print(f"Deleting {focus_item.id} from vector store...")
         chroma_service.vector_store.delete(ids=[str(focus_item.id)])
         focus_item.in_vector_store = False
-        print(f"Deleted {focus_item.text} from vector store.")
+        print(f"Deleted {focus_item.id} from vector store.")
     except Exception as e:
         traceback.print_exc()
         print(f"Error deleting {focus_item.text} from vector store: {e}")
@@ -55,7 +64,7 @@ def delete_focus_item_from_vector_store(focus_item: Focus):
 
 
 def create_focus_items(
-    focus_items: List[FocusItemBaseV2] | List[FocusItemBase], profile_id: uuid.UUID, session: Session
+    focus_items: List[FocusItemBase], profile_id: uuid.UUID, session: Session
 ) -> List[Focus]:
     filtered_items = [item for item in focus_items if item.type not in NON_TASK_TYPES]
     if len(filtered_items) == 0:
@@ -76,16 +85,12 @@ def create_focus_items(
             for item in focus_items
         ]
 
-        created_items_vector = add_focus_items_to_vector_store(focus_items=created_items)
-        if created_items_vector:
-            session.add_all(created_items_vector)
-            session.flush()
-            session.commit()
-            return created_items_vector
-
         session.add_all(created_items)
         session.flush()
         session.commit()
+
+        add_focus_items_to_vector_store(focus_items=created_items, base_items=focus_items)
+
         return created_items
     except Exception as e:
         print(f"Error creating focus items: {e}")

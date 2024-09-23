@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 import pydantic
 from langchain.pydantic_v1 import BaseModel, Field
@@ -63,6 +63,7 @@ class Sentiment(str, Enum):
 
 
 class FocusItemBase(BaseModel):
+    id: str
     category: Category = Field(
         description="Shopping, grocery shopping, fashion, beauty, and personal style. Also includes items related to buying and selling.",
     )
@@ -75,6 +76,8 @@ class FocusItemBase(BaseModel):
         ge=1,
         le=5,
     )
+    location: Optional[str] = Field(description="The location associated with the item.")
+    keywords: List[str] = Field(description="The keywords associated with the item.", min_items=10)
     sentiment: Sentiment
     task_size: TaskSize
     text: str
