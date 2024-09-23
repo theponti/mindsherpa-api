@@ -1,14 +1,10 @@
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, status
 from fastapi.exceptions import HTTPException
-from pydantic import BaseModel, ValidationError
 
-from src.data.focus_repository import create_focus_items
 from src.data.models.focus import (
     Focus,
-    FocusItem,
-    FocusItemBaseV2,
     FocusState,
     complete_focus,
     get_focus_by_id,
@@ -21,13 +17,8 @@ focus_router = APIRouter()
 
 @focus_router.get("")
 async def get_focus_items(profile: CurrentProfile, db: SessionDep, category: Optional[str] = None):
-    """
-    Returns notes structure content as well as total tokens and total time for generation.
-    """
-    profile_id = profile.id
-
     query = db.query(Focus).filter(
-        Focus.profile_id == profile_id,
+        Focus.profile_id == profile.id,
         Focus.state.notin_(
             [
                 FocusState.completed.value,
@@ -49,30 +40,6 @@ async def get_focus_items(profile: CurrentProfile, db: SessionDep, category: Opt
     focus_items = query.all()
 
     return {"items": focus_items}
-
-
-class CreateFocusItemBaseV2(BaseModel):
-    items: List[FocusItemBaseV2]
-
-
-@focus_router.post("")
-async def create_focus_item_route(
-    input: CreateFocusItemBaseV2, db: SessionDep, profile: CurrentProfile
-) -> List[FocusItem]:
-    try:
-        created_items = create_focus_items(
-            focus_items=input.items,
-            profile_id=profile.id,
-            session=db,
-        )
-
-        return [item.to_model() for item in created_items]
-    except Exception as e:
-        if isinstance(e, ValidationError):
-            print(e.errors())
-            raise HTTPException(status_code=422, detail=e.errors())
-        else:
-            raise HTTPException(status_code=500, detail=str(e))
 
 
 @focus_router.put("/complete/{task_id}", status_code=status.HTTP_200_OK)
