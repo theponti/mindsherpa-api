@@ -6,6 +6,7 @@ from fastapi.responses import StreamingResponse
 
 from src.services import chroma_service
 from src.services.file_service import get_file_contents
+from src.services.keywords.keywords_service import get_query_keywords
 from src.services.openai_service import openai_async_client
 from src.services.pinecone_service import euclidean_index, pc
 from src.services.user_intent.user_intent_service import (
@@ -34,6 +35,18 @@ async def chat(message: str = Form(...), dev_env=Depends(depends_on_development)
     )
 
     return response.choices[0].message.content
+
+
+@ai_router.post("/sherpa/keyword-generator")
+def sherpa_keyword_generator(
+    request: Request,
+    task_description: str = Form(...),
+    dev_env=Depends(depends_on_development),
+):
+    # doc = chroma_service.vector_store.get(ids=[chroma_id])
+    # if not doc:
+    #     return []
+    return get_query_keywords(task_description)
 
 
 @ai_router.post("/chat/stream")

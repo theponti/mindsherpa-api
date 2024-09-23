@@ -13,6 +13,11 @@ from src.services import chroma_service
 NON_TASK_TYPES = ["chat", "feeling", "request", "question"]
 
 
+def get_focus_item_by_id(focus_items: List[Focus], id: str) -> Focus:
+    focus_item = next((item for item in focus_items if str(item.id) == id), None)
+    return focus_item
+
+
 def add_focus_items_to_vector_store(focus_items: List[Focus]) -> List[Focus] | None:
     if not focus_items or len(focus_items) == 0:
         return None
