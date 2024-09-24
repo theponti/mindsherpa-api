@@ -12,20 +12,21 @@ from src.utils.logger import logger
 
 def delete_none_ids_from_chroma():
     try:
-        print("Deleting None IDs from Chroma")
-        result = chroma_service.focus_collection.get(ids=["None"])
+        collection = chroma_service.get_collection("focus")
+        if not collection:
+            return
+
+        result = collection.get(ids=["None"])
         documents = result["documents"]
-        print("Got documents")
         if documents:
             if len(documents) > 0:
                 logger.info("No None IDs to delete from Chroma.")
                 return
 
             logger.info(f"Deleting None IDs from Chroma: {len(documents)}")
-            chroma_service.focus_collection.delete(ids=["None"])
+            collection.delete(ids=["None"])
             logger.info(f"{len(documents)} None IDs deleted from Chroma.")
     except Exception as e:
-        print("Problem")
         traceback.print_exc()
         logger.error(f"Error deleting None IDs from Chroma: {e}")
 

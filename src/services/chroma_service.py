@@ -40,13 +40,19 @@ if chroma_client:
         collection_name="focus",
         embedding_function=openai_embeddings,
     )
-    focus_collection = chroma_client.get_collection("focus")
 else:
     vector_store = Chroma(
         collection_name="focus",
         embedding_function=openai_embeddings,
         persist_directory=".chroma",
     )
+
+
+def get_collection(name: str):
+    if not chroma_client:
+        return None
+
+    return chroma_client.get_collection(name)
 
 
 def clear_focus_items_from_vector_store():
