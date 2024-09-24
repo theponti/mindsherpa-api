@@ -12,8 +12,10 @@ from src.utils.logger import logger
 
 def delete_none_ids_from_chroma():
     try:
+        print("Deleting None IDs from Chroma")
         result = chroma_service.focus_collection.get(ids=["None"])
         documents = result["documents"]
+        print("Got documents")
         if documents:
             if len(documents) > 0:
                 logger.info("No None IDs to delete from Chroma.")
@@ -23,15 +25,17 @@ def delete_none_ids_from_chroma():
             chroma_service.focus_collection.delete(ids=["None"])
             logger.info(f"{len(documents)} None IDs deleted from Chroma.")
     except Exception as e:
+        print("Problem")
         traceback.print_exc()
         logger.error(f"Error deleting None IDs from Chroma: {e}")
 
 
 def refresh_focus_from_chroma():
     session = SessionLocal()
-
+    print("Refreshing Focus from Chroma")
     try:
         focus_items = session.query(Focus).filter(Focus.in_vector_store.is_(False)).all()
+        print(f"Focus items: {focus_items}")
         if not focus_items:
             logger.info("No focus items to refresh from the vector store.")
             return
