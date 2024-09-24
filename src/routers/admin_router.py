@@ -7,7 +7,6 @@ from src.services import chroma_service
 from src.services.file_service import get_file_contents
 from src.services.keywords.keywords_service import get_query_keywords
 from src.services.user_intent.user_intent_service import (
-    GeneratedIntentsResponse,
     generate_intent_result,
     get_user_intent,
 )
@@ -22,7 +21,7 @@ def depends_on_development():
     return True
 
 
-@admin_router.post("/sherpa/keyword-generator")
+@admin_router.post("/keyword-generator")
 def sherpa_keyword_generator(
     request: Request,
     task_description: str = Form(...),
@@ -31,10 +30,11 @@ def sherpa_keyword_generator(
     return get_query_keywords(task_description)
 
 
-@admin_router.post("/sherpa/intent")
+@admin_router.post("/intent")
 def sherpa_user_intent(
     request: Request,
     input: str = Form(...),
+    formatted: bool = Form(False),
     profile_id: uuid.UUID = Form(...),
     dev_env=Depends(depends_on_development),
 ):
@@ -44,42 +44,18 @@ def sherpa_user_intent(
 
     try:
         intents = get_user_intent(content, profile_id=profile_id)
+
+        if formatted:
+            result = generate_intent_result(intents)
+            return result
+
         return intents
     except Exception:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@admin_router.post("/sherpa/intent/formatted")
-def sherpa_user_intent_agent(
-    request: Request,
-    input: str = Form(...),
-    profile_id: uuid.UUID = Form(...),
-    dev_env=Depends(depends_on_development),
-) -> GeneratedIntentsResponse:
-    content = input
-    if request.query_params.get("test"):
-        content = get_file_contents("src/prompts/test_user_input.md")
-
-    try:
-        intent = get_user_intent(content, profile_id=profile_id)
-        result = generate_intent_result(intent)
-
-        return result
-    except Exception:  # pylint: disable=broad-except
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
-
-@admin_router.get("/sherpa/vector_search/{id}")
-def get_vector_document_by_id(
-    request: Request,
-    dev_env=Depends(depends_on_development),
-):
-    return chroma_service.vector_store.get(ids=[request.path_params["id"]])
-
-
-@admin_router.post("/sherpa/vector_search")
+@admin_router.post("/vector_search")
 def sherpa_vector_search(
     request: Request,
     query: str = Form(...),
@@ -92,3 +68,11 @@ def sherpa_vector_search(
         filter={"profile_id": str(profile_id)},
         score_threshold=threshold,
     )
+
+
+@admin_router.get("/vector_search/{id}")
+def get_vector_document_by_id(
+    request: Request,
+    dev_env=Depends(depends_on_development),
+):
+    return chroma_service.vector_store.get(ids=[request.path_params["id"]])
