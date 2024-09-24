@@ -35,13 +35,14 @@ def refresh_focus_from_chroma():
     print("Refreshing Focus from Chroma")
     try:
         focus_items = session.query(Focus).filter(Focus.in_vector_store.is_(False)).all()
-        print(f"Focus items: {focus_items}")
         if not focus_items:
             logger.info("No focus items to refresh from the vector store.")
             return
 
+        print(f"Focus items: {len(focus_items)}")
         docs = chroma_service.vector_store.get(ids=[str(focus_item.id) for focus_item in focus_items])
-
+        print(f"Docs: {len(docs['documents'])}")
+        logger.info(f"Docs: {len(docs['documents'])}")
         completed_ids = []
         for doc, doc_id, metadata in zip(docs["documents"], docs["ids"], docs["metadatas"]):
             keywords = get_query_keywords(doc)
