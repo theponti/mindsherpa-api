@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from src.services import chroma_service
 from src.services.file_service import get_file_contents
 from src.services.keywords.keywords_service import get_query_keywords
-from src.services.pinecone_service import vector_store
 from src.services.user_intent.user_intent_service import (
     GeneratedIntentsResponse,
     generate_intent_result,
@@ -93,27 +92,3 @@ def sherpa_vector_search(
         filter={"profile_id": str(profile_id)},
         score_threshold=threshold,
     )
-
-
-# vector_store.similarity_search_with_score(
-#     "Will it be hot tomorrow?", k=1, filter={"source": "news"}
-# )
-
-
-@admin_router.post("/sherpa/vector_search/pinecone")
-def sherpa_vector_search_pinecone(
-    query: str = Form(...),
-    threshold: float = Form(None),
-    profile_id: uuid.UUID = Form(...),
-    dev_env=Depends(depends_on_development),
-):
-    retriever = vector_store.as_retriever(
-        search_type="similarity_score_threshold",
-        search_kwargs={"k": 1, "score_threshold": threshold or 0.5},
-    )
-
-    results = retriever.invoke(query, filter={"profile_id": str(profile_id)})
-
-    return {
-        "results": [{"id": result.id, "text": result.metadata["text"]} for result in results],
-    }

@@ -47,6 +47,7 @@ def create_tasks(
 @tool("search_tasks")
 def search_tasks(
     keyword: str,
+    search_title: str,
     profile_id: uuid.UUID,
     due_on: Optional[datetime],
     due_after: Optional[datetime],
@@ -58,6 +59,7 @@ def search_tasks(
 
     Args:
         keyword (str): The keyword to search for tasks
+        search_title (str): A user-friendly title for the search
         profile_id (uuid.UUID): The user's Profile ID
         due_on (Optional[datetime]): The due date in ISO Date Time Format for the task. Example: "2023-01-01T12:00" | None
         due_after (Optional[datetime]): A ISO Date Time Format date used when the users wants to search for tasks after a specific date. Example: "2023-01-01T12:00" | None
