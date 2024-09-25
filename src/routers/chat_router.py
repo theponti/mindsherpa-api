@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 
 from src.data.chat_repository import insert_message
 from src.data.models.chat import Chat, ChatState, Message, MessageOutput, MessageRole
-from src.services.chat_service import get_chat_response
+from src.data.models.focus import FocusItem
+from src.services.user_intent.user_intent_service import generate_intent_result, get_user_intent
 from src.utils.context import CurrentProfile, CurrentUser, SessionDep
 
 chat_router = APIRouter()
@@ -134,19 +135,24 @@ async def get_chat(db: SessionDep, user: CurrentUser, chat_id: UUID) -> list[Mes
 
     messages = db.query(Message).filter(Message.chat_id == chat_id).all()
 
-    return [message.message_to_gql() for message in messages]
+    return [message.to_model(session=db) for message in messages]
 
 
 class ChatMessageInput(BaseModel):
     message: str
 
 
+class SendChatMessageOutput(BaseModel):
+    messages: List[MessageOutput]
+    function_calls: List[str]
+    focus_items: List[FocusItem]
+
+
 @chat_router.post("/{chat_id}/messages")
 async def send_chat_message(
     db: SessionDep, profile: CurrentProfile, input: ChatMessageInput, request: Request
-) -> List[MessageOutput]:
+) -> SendChatMessageOutput:
     chat_id = UUID(request.path_params["chat_id"])
-    user = profile.user
 
     # Insert new message into the database
     user_message = insert_message(
@@ -154,9 +160,19 @@ async def send_chat_message(
     )
 
     # Retrieve message from ChatGPT
-    sherpa_response = get_chat_response(db, input.message, profile.id, user=user)
+    user_intent = get_user_intent(user_input=input.message, profile_id=profile.id)
+    sherpa_response = generate_intent_result(intent=user_intent)
     if sherpa_response is None:
         raise Exception("No response from the model")
+
+    focus_items = []
+    function_calls = []
+    if sherpa_response.create is not None:
+        focus_items = sherpa_response.create.output
+        function_calls.append("create_tasks")
+    elif sherpa_response.search is not None:
+        focus_items = sherpa_response.search.output
+        function_calls.append("search_tasks")
 
     # Save system response to the database
     system_message = insert_message(
@@ -164,10 +180,15 @@ async def send_chat_message(
         chat_id=chat_id,
         profile_id=profile.id,
         role=MessageRole.ASSISTANT.value,
-        message=sherpa_response.message,
+        message=sherpa_response.output,
+        focus_ids=[item.id for item in focus_items],
     )
 
-    return [
-        user_message,
-        system_message,
-    ]
+    return SendChatMessageOutput(
+        messages=[
+            user_message.to_model(session=db),
+            system_message.to_model(session=db),
+        ],
+        function_calls=function_calls,
+        focus_items=[],
+    )

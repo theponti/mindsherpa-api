@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -22,8 +22,17 @@ def get_chat_history(session: Session, chat_id: UUID) -> List[Message]:
     return messages
 
 
-def insert_message(session: Session, chat_id: UUID, message: str, profile_id: UUID, role: str) -> Message:
-    new_message = Message(message=message, chat_id=chat_id, profile_id=profile_id, role=role)
+def insert_message(
+    session: Session,
+    chat_id: UUID,
+    message: str,
+    profile_id: UUID,
+    role: str,
+    focus_ids: Optional[List[int]] = None,
+) -> Message:
+    new_message = Message(
+        message=message, chat_id=chat_id, profile_id=profile_id, role=role, focus_ids=focus_ids
+    )
     session.add(new_message)
     session.commit()
 

@@ -14,7 +14,7 @@ from typing_extensions import Dict, TypedDict
 
 from src.data.db import SessionLocal
 from src.data.focus_repository import create_focus_items, search_focus_items
-from src.data.models.focus import FocusItem, FocusItemBaseV2, FocusState, UserIntentCreateTask
+from src.data.models.focus import FocusItem, FocusItemBase, FocusState, UserIntentCreateTask
 from src.services.file_service import get_file_contents
 from src.services.openai_service import openai_chat
 
@@ -179,7 +179,7 @@ def get_search_tasks(intermediate_steps) -> SearchIntentsResponse | None:
 
 class CreateTasksParameters(TypedDict):
     profile_id: uuid.UUID
-    tasks: List[FocusItemBaseV2]
+    tasks: List[FocusItemBase]
 
 
 class CreateIntentsResponse(pydantic.BaseModel):
@@ -237,13 +237,22 @@ def get_chat_tool_call(intermediate_steps) -> ChatResponse | None:
 
 class GeneratedIntentsResponse(pydantic.BaseModel):
     input: str | None
-    output: str | None
+    output: str
     chat: ChatResponse | None
     create: CreateIntentsResponse | None
     search: SearchIntentsResponse | None
 
 
 def generate_intent_result(intent) -> GeneratedIntentsResponse:
+    """
+    Generates a response based on the user intent.
+
+    Args:
+        intent (dict): The user intent.
+
+    Returns:
+        result (GeneratedIntentsResponse): The generated response.
+    """
     steps = intent["intermediate_steps"]
     output = intent["output"]
     search_output = get_search_tasks(steps)

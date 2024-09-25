@@ -38,6 +38,7 @@
     "httpx",
     "metadatas",
     "pyright",
+    "selectinload",
     "venv"
   ]
 }

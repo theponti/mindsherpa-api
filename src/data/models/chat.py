@@ -1,13 +1,14 @@
 import datetime
 import enum
+import traceback
 import uuid
 
 from pydantic import BaseModel
-from sqlalchemy import UUID, DateTime, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import ARRAY, UUID, DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from src.data.db import Base
-from src.utils.logger import logger
+from src.data.models import focus
 
 
 class MessageRole(enum.Enum):
@@ -60,6 +61,8 @@ class MessageOutput(BaseModel):
     chat_id: uuid.UUID
     profile_id: uuid.UUID
     created_at: datetime.datetime
+    focus_ids: list[int] | None
+    focus_items: list[focus.FocusItem] | None
 
 
 class Message(Base):
@@ -79,7 +82,20 @@ class Message(Base):
         DateTime, default=datetime.datetime.now(datetime.UTC)
     )
 
-    def message_to_gql(self) -> MessageOutput:
+    focus_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), nullable=True)
+
+    def get_focus_items(self, session) -> list[focus.FocusItem]:
+        if self.focus_ids:
+            focus_items = session.query(focus.Focus).filter(focus.Focus.id.in_(self.focus_ids)).all()
+            return [item.to_model() for item in focus_items]
+        return []
+
+    def to_model(self, session: Session) -> MessageOutput:
+        if self.focus_ids:
+            focus_items = self.get_focus_items(session)
+        else:
+            focus_items = []
+
         try:
             return MessageOutput(
                 id=self.id,
@@ -88,10 +104,12 @@ class Message(Base):
                 chat_id=self.chat_id,
                 profile_id=self.profile_id,
                 created_at=self.created_at,
+                focus_ids=self.focus_ids,
+                focus_items=focus_items,
             )
-        except AttributeError as e:
-            logger.error(f"Error converting MessageModel to Message: {e}")
-            raise ValueError("Invalid MessageModel data")
+        except Exception as e:
+            traceback.print_exc()
+            raise ValueError(f"Error converting Message to pydantic model: {e}")
 
     def __repr__(self):
         return f"<Message(id={self.id}, message={self.message})>"

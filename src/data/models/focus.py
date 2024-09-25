@@ -84,7 +84,7 @@ class UserIntentCreateTask(BaseModel):
     type: ItemType
 
 
-class FocusItemBaseV2(pydantic.BaseModel):
+class FocusItemBase(pydantic.BaseModel):
     category: str
     due_date: Optional[str] = None
     priority: int
@@ -94,7 +94,7 @@ class FocusItemBaseV2(pydantic.BaseModel):
     type: str
 
 
-class FocusItem(FocusItemBaseV2):
+class FocusItem(FocusItemBase):
     id: int
     state: FocusState
     profile_id: uuid.UUID
