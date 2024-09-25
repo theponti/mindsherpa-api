@@ -8,13 +8,13 @@ from pydantic import BaseModel
 from src.services import chroma_service
 from src.services.file_service import get_file_contents
 from src.services.keywords.keywords_service import get_query_keywords
+from src.services.user_intent.user_intent_graph import generate_intent_result_graph, get_user_intent_graph
 from src.services.user_intent.user_intent_service import (
     generate_intent_result,
-    generate_intent_result_graph,
     get_user_intent,
-    get_user_intent_graph,
 )
 from src.utils.config import settings
+from src.utils.context import SessionDep
 
 admin_router = APIRouter()
 
@@ -53,6 +53,7 @@ def sherpa_keyword_generator(
 @admin_router.post("/intent")
 def sherpa_user_intent(
     request: Request,
+    session: SessionDep,
     input: str = Form(...),
     formatted: bool = Form(False),
     profile_id: uuid.UUID = Form(...),
@@ -63,7 +64,7 @@ def sherpa_user_intent(
         content = get_file_contents("src/prompts/test_user_input.md")
 
     try:
-        intents = get_user_intent(content, profile_id=profile_id)
+        intents = get_user_intent(user_input=content, profile_id=profile_id, session=session)
 
         if formatted:
             result = generate_intent_result(intents)

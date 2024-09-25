@@ -13,7 +13,7 @@ from src.services.user_intent.user_intent_service import (
     generate_intent_result,
     get_user_intent,
 )
-from src.utils.context import CurrentProfile
+from src.utils.context import CurrentProfile, SessionDep
 from src.utils.logger import logger
 
 sherpa_router = APIRouter()
@@ -25,10 +25,10 @@ class GenerateTextIntentInput(BaseModel):
 
 @sherpa_router.post("/text")
 async def handle_text_input_route(
-    profile: CurrentProfile, input: GenerateTextIntentInput
+    session: SessionDep, profile: CurrentProfile, input: GenerateTextIntentInput
 ) -> GeneratedIntentsResponse:
     try:
-        intent = get_user_intent(input.content, profile_id=profile.id)
+        intent = get_user_intent(user_input=input.content, profile_id=profile.id, session=session)
         result = generate_intent_result(intent)
 
         return result
@@ -83,7 +83,9 @@ async def transcribe_audio(audio: AudioUpload, profile: CurrentProfile) -> str:
 
 
 @sherpa_router.post("/voice")
-async def handle_audio_upload_route(audio: AudioUpload, profile: CurrentProfile) -> GeneratedIntentsResponse:
+async def handle_audio_upload_route(
+    session: SessionDep, audio: AudioUpload, profile: CurrentProfile
+) -> GeneratedIntentsResponse:
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_file_path = os.path.join(temp_dir, "temp_audio.m4a")
@@ -98,7 +100,7 @@ async def handle_audio_upload_route(audio: AudioUpload, profile: CurrentProfile)
                     model="whisper-1", file=audio_file, response_format="text"
                 )
 
-        intent = get_user_intent(str(transcription), profile_id=profile.id)
+        intent = get_user_intent(user_input=str(transcription), profile_id=profile.id, session=session)
         result = generate_intent_result(intent)
 
         return result

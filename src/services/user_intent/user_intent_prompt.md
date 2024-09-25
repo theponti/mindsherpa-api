@@ -42,6 +42,7 @@ You MUST include at least 10 keywords in the task keywords list.
 
 ## Search
 
+
 ### SEARCH INPUT
 - if the user wants to perform a search, the `keyword` parameter should be used to search for tasks based on a keyword or specific attributes. The `keyword` parameter should be a string that represents the search query. It should be the primary focus of the user's query. For example:
    - "What do I need at the pet store today?" -> `keyword` = "pet store"
@@ -78,7 +79,10 @@ You MUST include at least 10 keywords in the task keywords list.
     - If a date is used, `You had one event yesterday.`
     - If no keyword is used, `Found 10 results`
 
-
+## Search Rules
+- DO NOT EXECUTE THE SEARCH TOOL IF THE USER DOES NOT SPECIFY A KEYWORD OR DATE.
+- IF THE USER ASKS A GENERAL QUESTION or A QUESTION RELATED TO THE CONVERSATION, DO NOT EXECUTE THE SEARCH TOOL.
+- THE SEARCH TOOL SHOULD BE CALLED WITH ALL REQUIRED PARAMETERS.
 
 ---
 

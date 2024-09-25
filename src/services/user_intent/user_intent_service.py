@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Annotated, Any, List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Tuple
 
 import pydantic
 from langchain.agents import AgentExecutor, create_tool_calling_agent
@@ -8,17 +8,25 @@ from langchain.schema import AgentAction
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    MessagesPlaceholder,
     SystemMessagePromptTemplate,
 )
 from langchain_core.tools import tool
-from langgraph.graph import END, Graph
+from sqlalchemy.orm import Session
 from typing_extensions import Dict, TypedDict
 
+from src.data.chat_repository import get_chat_history
 from src.data.db import SessionLocal
-from src.data.focus_repository import create_focus_items, search_focus_items
-from src.data.models.focus import FocusItem, FocusItemBase, FocusState, UserIntentCreateTask
+from src.data.focus_repository import create_focus_items
+from src.data.models.focus import FocusItem, FocusItemBase, UserIntentCreateTask
 from src.services.file_service import get_file_contents
 from src.services.openai_service import openai_chat
+from src.services.user_intent.tools.search_tasks import (
+    SearchIntentsResponse,
+    format_search_tool_calls,
+    search_tasks,
+)
 
 
 class IntentOutput(pydantic.BaseModel):
@@ -44,40 +52,6 @@ def create_tasks(
     session = SessionLocal()
     created_items = create_focus_items(focus_items=tasks, session=session, profile_id=profile_id)
     return [item.to_model() for item in created_items]
-
-
-@tool("search_tasks", parse_docstring=True)
-def search_tasks(
-    keyword: str,
-    search_title: str,
-    profile_id: uuid.UUID,
-    due_on: Optional[datetime],
-    due_after: Optional[datetime],
-    due_before: Optional[datetime],
-    status: Optional[FocusState],
-) -> List[FocusItem]:
-    """
-    Search for tasks based on a keyword or specific attributes.
-
-    Args:
-        keyword: The keyword to search for tasks
-        search_title: A user-friendly title for the search
-        profile_id: The user's Profile ID
-        due_on: The due date in ISO Date Time Format for the task. Example: "2023-01-01T12:00" | None
-        due_after: A ISO Date Time Format date used when the users wants to search for tasks after a specific date. Example: "2023-01-01T12:00" | None
-        due_before: A ISO Date Time Format date used when the users wants to search for tasks before a specific date. Example: "2023-01-01T12:00" | None
-        status: The status of the task
-    """
-    focus_items = search_focus_items(
-        keyword=keyword,
-        due_on=due_on,
-        due_after=due_after,
-        due_before=due_before,
-        status=status,
-        profile_id=profile_id,
-    )
-
-    return [focus_item.to_model() for focus_item in focus_items]
 
 
 @tool("edit_task")
@@ -107,46 +81,6 @@ def start_chat(user_message: str) -> str:
     return user_message
 
 
-class SearchIntentParameters(pydantic.BaseModel):
-    keyword: str
-    profile_id: uuid.UUID
-    due_on: Optional[datetime] | None = pydantic.Field(
-        None, description="The due date in ISO Date Time Format for the task"
-    )
-    due_after: Optional[datetime] | None = pydantic.Field(
-        None,
-        description="A ISO Date Time Format date used when the users wants to search for tasks after a specific date",
-    )
-    due_before: Optional[datetime] | None = pydantic.Field(
-        None,
-        description="A ISO Date Time Format date used when the users wants to search for tasks before a specific date",
-    )
-    status: Optional[str] | None = pydantic.Field(None, description="The status of the task")
-
-
-class SearchIntentsResponse(pydantic.BaseModel):
-    input: SearchIntentParameters
-    output: List[FocusItem]
-
-
-def get_search_tasks(intermediate_steps) -> SearchIntentsResponse | None:
-    search_tasks: List[Tuple[AgentAction, List[FocusItem]]] = list(
-        filter(lambda x: x[0].tool == "search_tasks", intermediate_steps)
-    )
-
-    if len(search_tasks) == 0:
-        return None
-
-    search_task = search_tasks[0]
-    if search_task[0].tool_input is None:
-        return None
-
-    return SearchIntentsResponse(
-        input=search_task[0].tool_input,  # type: ignore
-        output=search_tasks[0][1],
-    )
-
-
 class CreateTasksParameters(TypedDict):
     profile_id: uuid.UUID
     tasks: List[FocusItemBase]
@@ -157,7 +91,7 @@ class CreateIntentsResponse(pydantic.BaseModel):
     output: List[FocusItem]
 
 
-def get_create_tasks(intermediate_steps) -> CreateIntentsResponse | None:
+def format_create_tool_calls(intermediate_steps) -> CreateIntentsResponse | None:
     create_tasks: List[Tuple[AgentAction, List[FocusItem]]] = list(
         filter(lambda x: x[0].tool == "create_tasks", intermediate_steps)
     )
@@ -187,7 +121,7 @@ class ChatResponse(pydantic.BaseModel):
     output: str
 
 
-def get_chat_tool_call(intermediate_steps) -> ChatResponse | None:
+def format_chat_tool_call(intermediate_steps) -> ChatResponse | None:
     chat_calls: List[Tuple[AgentAction, str]] = list(
         filter(lambda x: x[0].tool == "chat", intermediate_steps)
     )
@@ -225,73 +159,20 @@ def generate_intent_result(intent) -> GeneratedIntentsResponse:
     """
     steps = intent["intermediate_steps"]
     output = intent["output"]
-    search_output = get_search_tasks(steps)
+    search_output = format_search_tool_calls(steps)
 
     return GeneratedIntentsResponse(
         input=intent["user_input"],
         output=output,
-        chat=get_chat_tool_call(steps),
-        create=get_create_tasks(steps),
+        chat=format_chat_tool_call(steps),
+        create=format_create_tool_calls(steps),
         search=search_output,
     )
 
 
-class AgentState(TypedDict):
-    messages: Annotated[Sequence[HumanMessage | AIMessage], pydantic.Field(default_factory=list)]
-    tools_used: Annotated[list[str], pydantic.Field(default_factory=list)]
-    profile_id: uuid.UUID
-    current_date: str
-
-
-def determine_tool(state: AgentState):
-    system_prompt = get_file_contents("src/services/user_intent/user_intent_prompt.md")
-    tools = [create_tasks, search_tasks, edit_task, start_chat]
-    chat_prompt = ChatPromptTemplate(
-        [
-            SystemMessagePromptTemplate.from_template(template=system_prompt),
-            ("human", ("Profile ID: {profile_id} \n\n" + "Today's Date: {current_date} \n\n" + "{input}")),
-            ("placeholder", "{agent_scratchpad}"),
-        ]
-    )
-    agent = create_tool_calling_agent(openai_chat, tools, chat_prompt)
-    result = agent.invoke(state)
-    tool_to_use = result.tool
-    return tool_to_use
-
-
-def execute_tool(state: AgentState, tool_name: str):
-    tools = {
-        "create_tasks": create_tasks,
-        "search_tasks": search_tasks,
-        "edit_task": edit_task,
-        "chat": start_chat,
-    }
-    tool = tools[tool_name]
-    result = tool(**state)  # You might need to adjust this based on your tool implementations
-    state["tools_used"].append(tool_name)
-    state["messages"].append(AIMessage(content=str(result)))
-    return state
-
-
-def should_continue(state: AgentState):
-    # For simplicity, let's say we continue if we've used less than 3 tools
-    return len(state["tools_used"]) < 3
-
-
-workflow = Graph()
-
-workflow.add_node("determine_tool", determine_tool)
-workflow.add_node("execute_tool", execute_tool)
-
-workflow.add_edge("determine_tool", "execute_tool")
-workflow.add_conditional_edges("execute_tool", should_continue, {True: "determine_tool", False: END})
-
-workflow.set_entry_point("determine_tool")
-
-chain = workflow.compile()
-
-
-def get_user_intent(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
+def get_user_intent(
+    session: Optional[Session], user_input: str, profile_id: uuid.UUID, chat_id: Optional[uuid.UUID] = None
+) -> Dict[str, Any]:
     system_prompt = get_file_contents("src/services/user_intent/user_intent_prompt.md")
     tools = [create_tasks, search_tasks, edit_task, start_chat]
     chat_prompt = ChatPromptTemplate(
@@ -299,9 +180,9 @@ def get_user_intent(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
             SystemMessagePromptTemplate.from_template(
                 template=system_prompt,
             ),
-            (
-                "human",
-                ("Profile ID: {profile_id} \n\n" + "Today's Date: {current_date} \n\n" + "{user_input}"),
+            MessagesPlaceholder(variable_name="messages"),
+            HumanMessagePromptTemplate.from_template(
+                "Profile ID: {profile_id} \n\n" + "Today's Date: {current_date} \n\n" + "{user_input}"
             ),
             ("placeholder", "{agent_scratchpad}"),
         ]
@@ -313,44 +194,24 @@ def get_user_intent(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
         verbose=True,
         return_intermediate_steps=True,
     )
+
+    messages: List[HumanMessage | AIMessage] = []
+    if chat_id and session:
+        chat_history = get_chat_history(session, chat_id)
+        for message in chat_history:
+            if message.role == "user":
+                messages.append(HumanMessage(content=message.message))
+            elif message.role == "assistant":
+                messages.append(AIMessage(content=message.message))
+
+    print([message.content for message in messages])
+
     result = agent_executor.invoke(
         {
             "profile_id": profile_id,
             "user_input": user_input,
             "current_date": datetime.now().strftime("%Y-%m-%d"),
+            "messages": messages,
         }
     )
     return result
-
-
-def get_user_intent_graph(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
-    initial_state = AgentState(
-        messages=[HumanMessage(content=user_input)],
-        tools_used=[],
-        profile_id=profile_id,
-        current_date=datetime.now().strftime("%Y-%m-%d"),
-    )
-    result = chain.invoke(initial_state)
-    return result
-
-
-def generate_intent_result_graph(intent: AgentState) -> GeneratedIntentsResponse:
-    """
-    Generates a response based on the user intent.
-
-    Args:
-        intent (AgentState): The final state after running the workflow.
-
-    Returns:
-        result (GeneratedIntentsResponse): The generated response.
-    """
-    steps = intent["tools_used"]
-    output = intent["messages"][-1].content if intent["messages"] else ""
-
-    return GeneratedIntentsResponse(
-        input=intent["messages"][0].content if intent["messages"] else None,
-        output=output,
-        chat=get_chat_tool_call(steps),
-        create=get_create_tasks(steps),
-        search=get_search_tasks(steps),
-    )

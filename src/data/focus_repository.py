@@ -156,7 +156,7 @@ def search_focus_items(
         elif status:
             query = query.filter(Focus.state == status.value)
 
-        focus_items = query.all()
+        focus_items = query.limit(10).all()
 
         return focus_items
     except Exception as e:
