@@ -50,7 +50,7 @@ def refresh_focus_from_chroma():
             page_content = f"{focus_item.text} \n\n {keyword_str}"
             document = Document(
                 page_content=page_content,
-                metadata={"keywords": keyword_str},
+                metadata=focus_item.to_json(),
             )
 
             if focus_id in existing_ids:
