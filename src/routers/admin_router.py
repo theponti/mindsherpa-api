@@ -1,7 +1,7 @@
 import traceback
 import uuid
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 
 from src.services import chroma_service
 from src.services.file_service import get_file_contents
@@ -15,9 +15,22 @@ from src.utils.config import settings
 admin_router = APIRouter()
 
 
-def depends_on_development():
+def admin_route(request: Request):
     if settings.ENVIRONMENT != "local":
-        raise ValueError("This endpoint is only available in local development")
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        auth_token = auth_header.split(" ")[1]
+        if settings.ADMIN_TOKEN != auth_token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
     return True
 
 
@@ -25,7 +38,7 @@ def depends_on_development():
 def sherpa_keyword_generator(
     request: Request,
     task_description: str = Form(...),
-    dev_env=Depends(depends_on_development),
+    admin=Depends(admin_route),
 ):
     return get_query_keywords(task_description)
 
@@ -36,7 +49,7 @@ def sherpa_user_intent(
     input: str = Form(...),
     formatted: bool = Form(False),
     profile_id: uuid.UUID = Form(...),
-    dev_env=Depends(depends_on_development),
+    admin=Depends(admin_route),
 ):
     content = input
     if request.query_params.get("test"):
@@ -55,13 +68,25 @@ def sherpa_user_intent(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
+@admin_router.post("/vector_search/collections", dependencies=[Depends(admin_route)])
+def get_vector_collections(
+    admin=Depends(admin_route),
+    id: str = Form(None),
+):
+    collection = chroma_service.chroma_client.get_collection(name="focus")
+    if not collection:
+        return HTTPException(status_code=404, detail="Collection not found")
+
+    return collection.get(ids=[id])
+
+
 @admin_router.post("/vector_search")
 def sherpa_vector_search(
     request: Request,
     query: str = Form(...),
     threshold: float = Form(None),
     profile_id: uuid.UUID = Form(...),
-    dev_env=Depends(depends_on_development),
+    admin=Depends(admin_route),
 ):
     return chroma_service.vector_store.similarity_search_with_relevance_scores(
         query=query,
@@ -73,6 +98,6 @@ def sherpa_vector_search(
 @admin_router.get("/vector_search/{id}")
 def get_vector_document_by_id(
     request: Request,
-    dev_env=Depends(depends_on_development),
+    admin=Depends(admin_route),
 ):
     return chroma_service.vector_store.get(ids=[request.path_params["id"]])

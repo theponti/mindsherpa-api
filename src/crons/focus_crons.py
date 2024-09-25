@@ -33,11 +33,9 @@ def delete_none_ids_from_chroma():
 
 def refresh_focus_from_chroma():
     session = SessionLocal()
-    print("Refreshing Focus from Chroma")
     try:
         focus_items = session.query(Focus).filter(Focus.in_vector_store.is_(False)).all()
         if not focus_items:
-            logger.info("No focus items to refresh from the vector store.")
             return
 
         logger.info(f"Adding {len(focus_items)} focus items to Chroma")
@@ -81,3 +79,6 @@ def refresh_focus_from_chroma():
     except Exception as e:
         traceback.print_exc()
         logger.error(f"Error refreshing focus items from vector store: {e}")
+    finally:
+        logger.info("Refreshing focus items from vector store complete.")
+        session.close()
