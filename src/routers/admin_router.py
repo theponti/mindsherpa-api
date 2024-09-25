@@ -1,5 +1,6 @@
 import traceback
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 
@@ -32,6 +33,9 @@ def admin_route(request: Request):
                 headers={"WWW-Authenticate": "Bearer"},
             )
     return True
+
+
+AdminRoute = Annotated[bool, Depends(admin_route)]
 
 
 @admin_router.post("/keyword-generator")
@@ -68,25 +72,11 @@ def sherpa_user_intent(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@admin_router.post("/vector_search/collections", dependencies=[Depends(admin_route)])
-def get_vector_collections(
-    admin=Depends(admin_route),
-    id: str = Form(None),
-):
-    collection = chroma_service.chroma_client.get_collection(name="focus")
-    if not collection:
-        return HTTPException(status_code=404, detail="Collection not found")
-
-    return collection.get(ids=[id])
-
-
-@admin_router.post("/vector_search")
-def sherpa_vector_search(
-    request: Request,
+@admin_router.post("/vector_search", dependencies=[Depends(admin_route)])
+def vector_search_by_profile_id(
     query: str = Form(...),
     threshold: float = Form(None),
     profile_id: uuid.UUID = Form(...),
-    admin=Depends(admin_route),
 ):
     return chroma_service.vector_store.similarity_search_with_relevance_scores(
         query=query,
@@ -95,9 +85,25 @@ def sherpa_vector_search(
     )
 
 
-@admin_router.get("/vector_search/{id}")
-def get_vector_document_by_id(
-    request: Request,
-    admin=Depends(admin_route),
+@admin_router.get("/vector_search/profile/{profile_id}", dependencies=[Depends(admin_route)])
+def get_vector_documents_by_profile_id(
+    profile_id: uuid.UUID,
 ):
-    return chroma_service.vector_store.get(ids=[request.path_params["id"]])
+    return chroma_service.vector_store.get(where={"profile_id": str(profile_id)})
+
+
+@admin_router.get("/vector_search/document/{id}", dependencies=[Depends(admin_route)])
+def get_vector_document_by_id(
+    id: str,
+):
+    return chroma_service.vector_store.get(ids=[id])
+
+
+@admin_router.get("/vector_search/collection/{collection_name}/peek", dependencies=[Depends(admin_route)])
+def get_vector_collection(
+    collection_name: str,
+):
+    collection = chroma_service.chroma_client.get_collection(name=collection_name)
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return collection.peek(10)
