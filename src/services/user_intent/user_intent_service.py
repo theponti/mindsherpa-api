@@ -1,15 +1,17 @@
 import uuid
 from datetime import datetime
-from typing import Any, List, Optional, Tuple
+from typing import Annotated, Any, List, Optional, Sequence, Tuple
 
 import pydantic
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain.schema import AgentAction
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     SystemMessagePromptTemplate,
 )
 from langchain_core.tools import tool
+from langgraph.graph import END, Graph
 from typing_extensions import Dict, TypedDict
 
 from src.data.db import SessionLocal
@@ -103,38 +105,6 @@ def start_chat(user_message: str) -> str:
         user_message (str): The user's message
     """
     return user_message
-
-
-def get_user_intent(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
-    system_prompt = get_file_contents("src/services/user_intent/user_intent_prompt.md")
-    tools = [create_tasks, search_tasks, edit_task, start_chat]
-    chat_prompt = ChatPromptTemplate(
-        [
-            SystemMessagePromptTemplate.from_template(
-                template=system_prompt,
-            ),
-            (
-                "human",
-                ("Profile ID: {profile_id} \n\n" + "Today's Date: {current_date} \n\n" + "{user_input}"),
-            ),
-            ("placeholder", "{agent_scratchpad}"),
-        ]
-    )
-    agent = create_tool_calling_agent(openai_chat, tools, chat_prompt)
-    agent_executor = AgentExecutor(
-        agent=agent,
-        tools=tools,
-        verbose=True,
-        return_intermediate_steps=True,
-    )
-    result = agent_executor.invoke(
-        {
-            "profile_id": profile_id,
-            "user_input": user_input,
-            "current_date": datetime.now().strftime("%Y-%m-%d"),
-        }
-    )
-    return result
 
 
 class SearchIntentParameters(pydantic.BaseModel):
@@ -263,4 +233,124 @@ def generate_intent_result(intent) -> GeneratedIntentsResponse:
         chat=get_chat_tool_call(steps),
         create=get_create_tasks(steps),
         search=search_output,
+    )
+
+
+class AgentState(TypedDict):
+    messages: Annotated[Sequence[HumanMessage | AIMessage], pydantic.Field(default_factory=list)]
+    tools_used: Annotated[list[str], pydantic.Field(default_factory=list)]
+    profile_id: uuid.UUID
+    current_date: str
+
+
+def determine_tool(state: AgentState):
+    system_prompt = get_file_contents("src/services/user_intent/user_intent_prompt.md")
+    tools = [create_tasks, search_tasks, edit_task, start_chat]
+    chat_prompt = ChatPromptTemplate(
+        [
+            SystemMessagePromptTemplate.from_template(template=system_prompt),
+            ("human", ("Profile ID: {profile_id} \n\n" + "Today's Date: {current_date} \n\n" + "{input}")),
+            ("placeholder", "{agent_scratchpad}"),
+        ]
+    )
+    agent = create_tool_calling_agent(openai_chat, tools, chat_prompt)
+    result = agent.invoke(state)
+    tool_to_use = result.tool
+    return tool_to_use
+
+
+def execute_tool(state: AgentState, tool_name: str):
+    tools = {
+        "create_tasks": create_tasks,
+        "search_tasks": search_tasks,
+        "edit_task": edit_task,
+        "chat": start_chat,
+    }
+    tool = tools[tool_name]
+    result = tool(**state)  # You might need to adjust this based on your tool implementations
+    state["tools_used"].append(tool_name)
+    state["messages"].append(AIMessage(content=str(result)))
+    return state
+
+
+def should_continue(state: AgentState):
+    # For simplicity, let's say we continue if we've used less than 3 tools
+    return len(state["tools_used"]) < 3
+
+
+workflow = Graph()
+
+workflow.add_node("determine_tool", determine_tool)
+workflow.add_node("execute_tool", execute_tool)
+
+workflow.add_edge("determine_tool", "execute_tool")
+workflow.add_conditional_edges("execute_tool", should_continue, {True: "determine_tool", False: END})
+
+workflow.set_entry_point("determine_tool")
+
+chain = workflow.compile()
+
+
+def get_user_intent(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
+    system_prompt = get_file_contents("src/services/user_intent/user_intent_prompt.md")
+    tools = [create_tasks, search_tasks, edit_task, start_chat]
+    chat_prompt = ChatPromptTemplate(
+        [
+            SystemMessagePromptTemplate.from_template(
+                template=system_prompt,
+            ),
+            (
+                "human",
+                ("Profile ID: {profile_id} \n\n" + "Today's Date: {current_date} \n\n" + "{user_input}"),
+            ),
+            ("placeholder", "{agent_scratchpad}"),
+        ]
+    )
+    agent = create_tool_calling_agent(openai_chat, tools, chat_prompt)
+    agent_executor = AgentExecutor(
+        agent=agent,
+        tools=tools,
+        verbose=True,
+        return_intermediate_steps=True,
+    )
+    result = agent_executor.invoke(
+        {
+            "profile_id": profile_id,
+            "user_input": user_input,
+            "current_date": datetime.now().strftime("%Y-%m-%d"),
+        }
+    )
+    return result
+
+
+def get_user_intent_graph(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
+    initial_state = AgentState(
+        messages=[HumanMessage(content=user_input)],
+        tools_used=[],
+        profile_id=profile_id,
+        current_date=datetime.now().strftime("%Y-%m-%d"),
+    )
+    result = chain.invoke(initial_state)
+    return result
+
+
+def generate_intent_result_graph(intent: AgentState) -> GeneratedIntentsResponse:
+    """
+    Generates a response based on the user intent.
+
+    Args:
+        intent (AgentState): The final state after running the workflow.
+
+    Returns:
+        result (GeneratedIntentsResponse): The generated response.
+    """
+    steps = intent["tools_used"]
+    output = intent["messages"][-1].content if intent["messages"] else ""
+
+    return GeneratedIntentsResponse(
+        input=intent["messages"][0].content if intent["messages"] else None,
+        output=output,
+        chat=get_chat_tool_call(steps),
+        create=get_create_tasks(steps),
+        search=get_search_tasks(steps),
     )

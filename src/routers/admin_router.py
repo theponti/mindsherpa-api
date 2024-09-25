@@ -3,13 +3,16 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from pydantic import BaseModel
 
 from src.services import chroma_service
 from src.services.file_service import get_file_contents
 from src.services.keywords.keywords_service import get_query_keywords
 from src.services.user_intent.user_intent_service import (
     generate_intent_result,
+    generate_intent_result_graph,
     get_user_intent,
+    get_user_intent_graph,
 )
 from src.utils.config import settings
 
@@ -107,3 +110,22 @@ def get_vector_collection(
     if not collection:
         raise HTTPException(status_code=404, detail="Collection not found")
     return collection.peek(10)
+
+
+class UserIntentResponse(BaseModel):
+    result: dict  # You might want to create a more specific Pydantic model for this
+
+
+@admin_router.post("/user_intent", response_model=UserIntentResponse, dependencies=[Depends(admin_route)])
+async def process_user_intent(user_input: str = Form(...), profile_id: uuid.UUID = Form(...)):
+    try:
+        # Call the get_user_intent function with the user input and profile ID
+        intent_result = get_user_intent_graph(user_input, profile_id)
+
+        # Generate the final result using the generate_intent_result function
+        final_result = generate_intent_result_graph(intent_result)
+
+        # Return the result as a dictionary
+        return UserIntentResponse(result=final_result.dict())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

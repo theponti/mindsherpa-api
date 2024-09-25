@@ -62,4 +62,5 @@ def get_profile(db: SessionDep, user: CurrentUser) -> Profile:
     return profile
 
 
-CurrentProfile = Annotated[Profile, Depends(get_profile)]
+ProfileDepends = Depends(get_profile)
+CurrentProfile = Annotated[Profile, ProfileDepends]
