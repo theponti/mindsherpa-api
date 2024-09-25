@@ -33,6 +33,7 @@ def delete_none_ids_from_chroma():
 
 def refresh_focus_from_chroma():
     session = SessionLocal()
+
     try:
         focus_items = session.query(Focus).filter(Focus.in_vector_store.is_(False)).all()
         if not focus_items:

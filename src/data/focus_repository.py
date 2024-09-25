@@ -125,7 +125,7 @@ def search_focus_items(
         results = chroma_service.vector_store.similarity_search_with_relevance_scores(
             query=keyword,
             filter={"profile_id": str(profile_id)},
-            # score_threshold=0.4,
+            score_threshold=0,
         )
         ids = []
         for res, score in results:

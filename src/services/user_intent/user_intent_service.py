@@ -44,7 +44,7 @@ def create_tasks(
     return [item.to_model() for item in created_items]
 
 
-@tool("search_tasks")
+@tool("search_tasks", parse_docstring=True)
 def search_tasks(
     keyword: str,
     search_title: str,
@@ -58,13 +58,13 @@ def search_tasks(
     Search for tasks based on a keyword or specific attributes.
 
     Args:
-        keyword (str): The keyword to search for tasks
-        search_title (str): A user-friendly title for the search
-        profile_id (uuid.UUID): The user's Profile ID
-        due_on (Optional[datetime]): The due date in ISO Date Time Format for the task. Example: "2023-01-01T12:00" | None
-        due_after (Optional[datetime]): A ISO Date Time Format date used when the users wants to search for tasks after a specific date. Example: "2023-01-01T12:00" | None
-        due_before (Optional[datetime]): A ISO Date Time Format date used when the users wants to search for tasks before a specific date. Example: "2023-01-01T12:00" | None
-        status (Optional[FocusState]): The status of the task
+        keyword: The keyword to search for tasks
+        search_title: A user-friendly title for the search
+        profile_id: The user's Profile ID
+        due_on: The due date in ISO Date Time Format for the task. Example: "2023-01-01T12:00" | None
+        due_after: A ISO Date Time Format date used when the users wants to search for tasks after a specific date. Example: "2023-01-01T12:00" | None
+        due_before: A ISO Date Time Format date used when the users wants to search for tasks before a specific date. Example: "2023-01-01T12:00" | None
+        status: The status of the task
     """
     focus_items = search_focus_items(
         keyword=keyword,

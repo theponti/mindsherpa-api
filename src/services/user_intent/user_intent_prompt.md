@@ -73,6 +73,11 @@ You MUST include at least 10 keywords in the task keywords list.
     - "What do I need at the grocery store?" -> `keyword` = "grocery store", `due_on` = None, `due_after` = None, `due_before` = None
     - "What do I need to do for work?" -> `keyword` = "work", `due_on` = None, `due_after` = None, `due_before` = None
     - USE null value `due_on`, `due_after`, or `due_before` values if the user does not specify a specific date.
+- The response format for the assistant message when users perform a search is as follows:
+    - If a keyword is used, `Found 10 results for the keyword 'focus'`
+    - If a date is used, `You had one event yesterday.`
+    - If no keyword is used, `Found 10 results`
+
 
 
 ---
