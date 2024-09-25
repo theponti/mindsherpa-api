@@ -1,3 +1,4 @@
+import inspect
 import json
 import logging
 from typing import Any, Dict, Optional
@@ -6,18 +7,20 @@ from typing import Any, Dict, Optional
 class StructuredLogger:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.INFO)
         handler = logging.StreamHandler()
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter("%(asctime)s - %(_caller_filename)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
     def _log(self, level: str, message: str, values: Optional[Dict[str, Any]] = None):
         log_data = {"message": message, "values": values or {}}
-        if not values:
-            self.logger.log(getattr(logging, level), message)
-            return
-        self.logger.log(getattr(logging, level), json.dumps(log_data, indent=2, sort_keys=True))
+        frame = inspect.stack()[2]
+        filename = frame.filename
+        if values:
+            self.logger.log(getattr(logging, level), json.dumps(log_data, indent=2, sort_keys=True))
+        else:
+            self.logger.log(getattr(logging, level), message, extra={"_caller_filename": filename})
 
     def debug(self, message: str, values: Optional[Dict[str, Any]] = None):
         self._log("DEBUG", message, values)
