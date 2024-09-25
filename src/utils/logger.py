@@ -1,6 +1,7 @@
 import inspect
 import json
 import logging
+import sys
 from typing import Any, Dict, Optional
 
 
@@ -8,7 +9,7 @@ class StructuredLogger:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler()
+        handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter("%(asctime)s - %(_caller_filename)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
