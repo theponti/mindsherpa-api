@@ -204,8 +204,6 @@ def get_user_intent(
             elif message.role == "assistant":
                 messages.append(AIMessage(content=message.message))
 
-    print([message.content for message in messages])
-
     result = agent_executor.invoke(
         {
             "profile_id": profile_id,

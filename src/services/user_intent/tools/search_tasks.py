@@ -8,6 +8,7 @@ from langchain_core.tools import tool
 
 from src.data.focus_repository import search_focus_items
 from src.data.models.focus import FocusItem, FocusState
+from src.utils.date_tools import get_datetime_from_string
 
 
 @tool("search_tasks", parse_docstring=True)
@@ -15,10 +16,10 @@ def search_tasks(
     keyword: str,
     search_title: str,
     profile_id: uuid.UUID,
-    due_on: Optional[datetime],
-    due_after: Optional[datetime],
-    due_before: Optional[datetime],
-    status: Optional[FocusState],
+    due_on: Optional[datetime | None] = None,
+    due_after: Optional[datetime | None] = None,
+    due_before: Optional[datetime | None] = None,
+    status: Optional[FocusState | None] = None,
 ) -> List[FocusItem]:
     """
     Search for tasks based on a keyword or specific attributes.
@@ -32,6 +33,11 @@ def search_tasks(
         due_before: A ISO Date Time Format date used when the users wants to search for tasks before a specific date. Example: "2023-01-01T12:00" | None
         status: The status of the task
     """
+
+    due_on = get_datetime_from_string(due_on)
+    due_after = get_datetime_from_string(due_after)
+    due_before = get_datetime_from_string(due_before)
+
     focus_items = search_focus_items(
         keyword=keyword,
         due_on=due_on,
