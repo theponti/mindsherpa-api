@@ -1,5 +1,5 @@
 from datetime import datetime, time
-from typing import Any, Optional
+from typing import Optional
 
 
 def date_to_iso(date: datetime | str | None) -> Optional[str]:
@@ -24,8 +24,11 @@ def get_end_of_today():
     return end_of_today
 
 
-def get_datetime_from_string(date_string: Any) -> Optional[datetime]:
-    if not date_string:
+def get_datetime_from_string(date_string: datetime | str | None) -> Optional[datetime]:
+    if isinstance(date_string, datetime):
+        return date_string
+
+    if not date_string or not isinstance(date_string, str):
         return None
 
     try:
