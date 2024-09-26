@@ -12,6 +12,12 @@ def date_to_iso(date: datetime | str | None) -> Optional[str]:
     return None
 
 
+def get_start_of_today():
+    today = datetime.now().date()
+    start_of_today = datetime.combine(today, time(0, 0, 0))
+    return start_of_today
+
+
 def get_end_of_today():
     today = datetime.now().date()
     end_of_today = datetime.combine(today, time(23, 59, 59))

@@ -10,6 +10,7 @@ from src.data.models.focus import (
     get_focus_by_id,
 )
 from src.utils.context import CurrentProfile, SessionDep
+from src.utils.date_tools import get_end_of_today, get_start_of_today
 from src.utils.logger import logger
 
 focus_router = APIRouter()
@@ -31,10 +32,10 @@ async def get_focus_items(profile: CurrentProfile, db: SessionDep, category: Opt
         query = query.filter(Focus.category == category)
 
     # Apply due date filter
-    # query = query.filter(or_(Focus.due_date <= get_end_of_today(), Focus.due_date.is_(None)))
+    query = query.filter(Focus.due_date <= get_end_of_today()).filter(Focus.due_date >= get_start_of_today())
 
     # Apply ordering
-    query = query.order_by(Focus.due_date.desc())
+    query = query.order_by(Focus.due_date.asc())
 
     # Execute query
     focus_items = query.all()
