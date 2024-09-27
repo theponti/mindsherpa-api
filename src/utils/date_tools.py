@@ -1,5 +1,8 @@
-from datetime import datetime, time
+from datetime import datetime
 from typing import Optional
+
+import pytz
+import pytz.reference
 
 
 def date_to_iso(date: datetime | str | None) -> Optional[str]:
@@ -12,16 +15,33 @@ def date_to_iso(date: datetime | str | None) -> Optional[str]:
     return None
 
 
-def get_start_of_today():
-    today = datetime.now().date()
-    start_of_today = datetime.combine(today, time(0, 0, 0))
-    return start_of_today
+def get_end_of_date(date: datetime | str | None) -> datetime:
+    if isinstance(date, datetime):
+        return date.replace(hour=23, minute=59, second=59, microsecond=999999)
+    elif isinstance(date, str):
+        return datetime.fromisoformat(date).replace(hour=23, minute=59, second=59, microsecond=999999)
+    return datetime.now(pytz.UTC).replace(hour=23, minute=59, second=59, microsecond=999999)
 
 
-def get_end_of_today():
-    today = datetime.now().date()
-    end_of_today = datetime.combine(today, time(23, 59, 59))
-    return end_of_today
+def get_start_of_date(date: datetime | str | None) -> datetime:
+    if isinstance(date, datetime):
+        return date.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif isinstance(date, str):
+        return datetime.fromisoformat(date).replace(hour=0, minute=0, second=0, microsecond=0)
+    return datetime.now(pytz.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def get_start_of_day(client_tz: pytz.BaseTzInfo, date: Optional[datetime | str] = None) -> datetime:
+    if date:
+        return get_start_of_date(date)
+
+    return datetime.now(client_tz).replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def get_end_of_day(client_tz: pytz.BaseTzInfo, date: Optional[datetime | str] = None) -> datetime:
+    if date:
+        return get_end_of_date(date)
+    return datetime.now(client_tz).replace(hour=23, minute=59, second=59, microsecond=999999)
 
 
 def get_datetime_from_string(date_string: datetime | str | None) -> Optional[datetime]:

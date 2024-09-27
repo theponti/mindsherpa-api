@@ -1,19 +1,33 @@
 import uuid
 from datetime import timedelta
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+import tests.mocks.mock_chroma_service
+
 from src.data.db import Base
 from src.data.models.chat import Chat, ChatState
 from src.data.models.user import Profile, User
 from src.main import app
+
+# Import the module you want to test
 from src.utils.config import settings
 from src.utils.context import get_db
 from src.utils.security import ACCESS_TOKEN_EXPIRE_MINUTES, AccessTokenSubject, TokenService
 
+
+# Patch the entire chroma_service module
+@pytest.fixture(autouse=True)
+def mock_chroma_service():
+    with patch("src.services.chroma_service", tests.mocks.mock_chroma_service):
+        yield
+
+
+# You can add more tests as needed
 # Test database URL
 TEST_DATABASE_URL = "postgresql://postgres:postgres@localhost:5434/test_db"
 
