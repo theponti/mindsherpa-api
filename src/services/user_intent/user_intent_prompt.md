@@ -43,8 +43,28 @@ When creating tasks, follow these rules:
 
 1. Task Creation:
    - Break down complex requests into multiple tasks or steps
-   - Assign a priority level (high, medium, low) to each task
-   - Associate locations with tasks as separate parameters, not in keywords
+   - Assign a priority level (1-5) to each task
+   - Assign a task's location to the `location` parameters and do not include the location in `text` parameter
+   - Assign a task `category` task from the following list:
+      - "career"
+      - "personal_development"
+      - "physical_health"
+      - "mental_health"
+      - "finance"
+      - "education"
+      - "relationships"
+      - "home"
+      - "shopping"
+      - "interests"
+      - "adventure"
+      - "technology"
+      - "spirituality"
+      - "productivity"
+      - "creativity"
+      - "culture"
+      - "legal"
+      - "events"
+      - "projects"
 
 2. Task Keywords:
    - Include 5-10 relevant keywords per task

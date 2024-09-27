@@ -1,11 +1,14 @@
-from typing import Optional
+from datetime import datetime
+from typing import Annotated, Optional
 
 import pytz
 from fastapi import APIRouter, Query, status
 from fastapi.exceptions import HTTPException
+from pydantic import BaseModel, Field, StringConstraints
 
 from src.data.models.focus import (
     Focus,
+    FocusItem,
     FocusState,
     complete_focus,
     get_focus_by_id,
@@ -83,3 +86,31 @@ async def delete_focus_item_route(id: int, db: SessionDep, profile: CurrentProfi
     db.delete(note)
     db.commit()
     return True
+
+
+class FocusUpdateInput(BaseModel):
+    id: int
+    text: Annotated[str, StringConstraints(min_length=1)]
+    due_date: Annotated[Optional[str], Field(default=None, description="Due date for the focus item")]
+    category: Annotated[Optional[str], Field(default=None, description="Category for the focus item")]
+    timezone: Annotated[Optional[str], Field(default=None, description="Timezone for the focus item")]
+
+
+@focus_router.put("/{id}")
+async def update_focus_item_route(
+    id: int, db: SessionDep, profile: CurrentProfile, input: FocusUpdateInput
+) -> FocusItem:
+    focus_item = get_focus_by_id(db, id)
+    if not focus_item:
+        raise HTTPException(status_code=404, detail="Focus item not found")
+
+    focus_item.text = input.text
+    if input.due_date and input.timezone:
+        focus_item.due_date = datetime.fromisoformat(input.due_date).astimezone(pytz.timezone(input.timezone))
+
+    if input.category:
+        focus_item.category = input.category
+
+    db.commit()
+    db.refresh(focus_item)
+    return focus_item

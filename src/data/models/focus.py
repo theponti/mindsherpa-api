@@ -64,9 +64,7 @@ class Sentiment(str, Enum):
 
 class UserIntentCreateTask(BaseModel):
     id: str
-    category: Category = Field(
-        description="Shopping, grocery shopping, fashion, beauty, and personal style. Also includes items related to buying and selling.",
-    )
+    category: str = Field(description="The category of the life management task.")
     due_date: Optional[str] = Field(
         None,
         description="The deadline for completing the item in YYYY-MM-DDTHH:MM format. Example: due_date: 2023-01-01T12:00",
@@ -77,7 +75,7 @@ class UserIntentCreateTask(BaseModel):
         le=5,
     )
     location: Optional[str] = Field(description="The location associated with the item.")
-    keywords: List[str] = Field(description="The keywords associated with the item.", min_items=10)
+    keywords: List[str] = Field(description="The keywords associated with the item.")
     sentiment: Sentiment
     task_size: TaskSize
     text: str
@@ -163,7 +161,7 @@ def get_focus_by_profile_id(session: Session, profile_id: uuid.UUID):
     return session.query(Focus).filter(Focus.profile_id == profile_id).all()
 
 
-def get_focus_by_id(session: Session, focus_id: int) -> Focus:
+def get_focus_by_id(session: Session, focus_id: int) -> Focus | None:
     return session.query(Focus).filter(Focus.id == focus_id).first()
 
 
