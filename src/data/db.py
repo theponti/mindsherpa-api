@@ -13,6 +13,14 @@ Session = sessionmaker(engine)
 SessionLocal = sessionmaker(bind=engine)
 
 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 def connect_to_db():
     try:
         connection = engine.connect()

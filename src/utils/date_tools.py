@@ -31,17 +31,28 @@ def get_start_of_date(date: datetime | str | None) -> datetime:
     return datetime.now(pytz.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-def get_start_of_day(client_tz: pytz.BaseTzInfo, date: Optional[datetime | str] = None) -> datetime:
+def get_start_of_day(
+    client_tz: Optional[pytz.BaseTzInfo] = None, date: Optional[datetime | str] = None
+) -> datetime:
+    if client_tz:
+        return datetime.now(client_tz).replace(hour=0, minute=0, second=0, microsecond=0)
+
     if date:
         return get_start_of_date(date)
 
-    return datetime.now(client_tz).replace(hour=0, minute=0, second=0, microsecond=0)
+    return datetime.now(pytz.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-def get_end_of_day(client_tz: pytz.BaseTzInfo, date: Optional[datetime | str] = None) -> datetime:
+def get_end_of_day(
+    client_tz: Optional[pytz.BaseTzInfo] = None, date: Optional[datetime | str] = None
+) -> datetime:
+    if client_tz:
+        return datetime.now(client_tz).replace(hour=23, minute=59, second=59, microsecond=999999)
+
     if date:
         return get_end_of_date(date)
-    return datetime.now(client_tz).replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    return datetime.now(pytz.UTC).replace(hour=23, minute=59, second=59, microsecond=999999)
 
 
 def get_datetime_from_string(date_string: datetime | str | None) -> Optional[datetime]:

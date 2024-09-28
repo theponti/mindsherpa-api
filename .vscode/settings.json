@@ -32,6 +32,7 @@
     "uvicorn"
   ],
   "cSpell.words": [
+    "apscheduler",
     "cfgv",
     "chromadb",
     "hotdate",

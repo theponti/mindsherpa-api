@@ -1,8 +1,8 @@
 import traceback
 
 from langchain_core.documents import Document
+from sqlalchemy.orm import Session
 
-from src.data.db import SessionLocal
 from src.data.models.focus import Focus
 from src.services import chroma_service
 from src.services.keywords.keywords_service import get_query_keywords
@@ -30,13 +30,10 @@ def delete_none_ids_from_chroma():
         logger.error(f"Error deleting None IDs from Chroma: {e}")
 
 
-def refresh_focus_from_chroma():
-    session = SessionLocal()
-
+def refresh_focus_from_chroma(session: Session):
     try:
         focus_items = session.query(Focus).filter(Focus.in_vector_store.is_(False)).all()
         if not focus_items:
-            logger.info("No new focus items to add to Chroma")
             return
 
         logger.info(f"Processing {len(focus_items)} focus items for Chroma")
@@ -78,6 +75,3 @@ def refresh_focus_from_chroma():
     except Exception as e:
         traceback.print_exc()
         logger.error(f"Error refreshing focus items from vector store: {e}")
-    finally:
-        logger.info("Refreshing focus items from vector store complete.")
-        session.close()

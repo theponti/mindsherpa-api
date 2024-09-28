@@ -59,6 +59,8 @@ async def get_focus_items(
 
     # Execute query
     focus_items = query.all()
+    for item in focus_items:
+        item.due_date = pytz.utc.localize(item.due_date).astimezone(pytz.timezone(timezone))
 
     return {"items": focus_items}
 
@@ -91,7 +93,7 @@ async def delete_focus_item_route(id: int, db: SessionDep, profile: CurrentProfi
 class FocusUpdateInput(BaseModel):
     id: int
     text: Annotated[str, StringConstraints(min_length=1)]
-    due_date: Annotated[Optional[str], Field(default=None, description="Due date for the focus item")]
+    due_date: Annotated[Optional[datetime], Field(default=None, description="Due date for the focus item")]
     category: Annotated[Optional[str], Field(default=None, description="Category for the focus item")]
     timezone: Annotated[Optional[str], Field(default=None, description="Timezone for the focus item")]
 
@@ -106,11 +108,11 @@ async def update_focus_item_route(
 
     focus_item.text = input.text
     if input.due_date and input.timezone:
-        focus_item.due_date = datetime.fromisoformat(input.due_date).astimezone(pytz.timezone(input.timezone))
+        focus_item.due_date = input.due_date
 
     if input.category:
         focus_item.category = input.category
 
     db.commit()
     db.refresh(focus_item)
-    return focus_item
+    return focus_item.to_model()

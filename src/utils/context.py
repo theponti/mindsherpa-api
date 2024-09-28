@@ -4,19 +4,10 @@ from fastapi import HTTPException, Request, status
 from fastapi.params import Depends
 from sqlalchemy.orm import Session
 
-from src.data.db import SessionLocal
+from src.data.db import get_db
 from src.data.models.user import Profile, User
 from src.data.users_repository import get_user_by_token
 from src.utils.config import settings
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 
 SessionDep = Annotated[Session, Depends(get_db)]
 # TokenDep = Annotated[str, Depends(reusable_oauth2)]
