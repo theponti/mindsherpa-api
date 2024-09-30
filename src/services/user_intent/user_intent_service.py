@@ -55,7 +55,7 @@ def create_tasks(
 
 
 @tool("edit_task")
-def edit_task(task_query: str, new_task_name: str, new_due_date: str, new_status: str) -> bool:
+def edit_task(task_query: str, new_task_name: str, new_due_date: str, new_status: str) -> str:
     """
     Edit an existing task in a task list
 
@@ -65,7 +65,7 @@ def edit_task(task_query: str, new_task_name: str, new_due_date: str, new_status
         new_due_date (str): The new due date in ISO Date Time Format for the task
         new_status (str): The updated status of the task
     """
-    return True
+    return "This feature is not yet implemented."
 
 
 @tool("chat")
