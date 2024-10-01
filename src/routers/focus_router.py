@@ -5,6 +5,7 @@ import pytz
 from fastapi import APIRouter, Query, status
 from fastapi.exceptions import HTTPException
 from pydantic import BaseModel, Field, StringConstraints
+from sqlalchemy.orm import Query as SQQuery
 
 from src.data.models.focus import (
     Focus,
@@ -18,6 +19,20 @@ from src.utils.date_tools import get_end_of_day, get_start_of_day
 from src.utils.logger import logger
 
 focus_router = APIRouter()
+
+
+def add_day_filter(query: SQQuery, timezone: str) -> SQQuery:
+    # Get start and end of today in the client's timezone
+    client_tz = pytz.timezone(timezone)
+    start_of_today = get_start_of_day(client_tz)
+    end_of_today = get_end_of_day(client_tz)
+
+    # Convert to UTC for database query
+    start_of_today_utc = start_of_today.astimezone(pytz.UTC)
+    end_of_today_utc = end_of_today.astimezone(pytz.UTC)
+
+    # Apply due date filter
+    return query.filter(Focus.due_date >= start_of_today_utc).filter(Focus.due_date <= end_of_today_utc)
 
 
 @focus_router.get("")
@@ -41,18 +56,6 @@ async def get_focus_items(
     # Apply category filter if provided
     if category:
         query = query.filter(Focus.category == category)
-
-    # Get start and end of today in the client's timezone
-    client_tz = pytz.timezone(timezone)
-    start_of_today = get_start_of_day(client_tz)
-    end_of_today = get_end_of_day(client_tz)
-
-    # Convert to UTC for database query
-    start_of_today_utc = start_of_today.astimezone(pytz.UTC)
-    end_of_today_utc = end_of_today.astimezone(pytz.UTC)
-
-    # Apply due date filter
-    query = query.filter(Focus.due_date >= start_of_today_utc).filter(Focus.due_date <= end_of_today_utc)
 
     # Apply ordering
     query = query.order_by(Focus.due_date.asc())
