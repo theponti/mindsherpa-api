@@ -37,6 +37,7 @@
     "chromadb",
     "hotdate",
     "httpx",
+    "langgraph",
     "metadatas",
     "pyright",
     "pytz",
