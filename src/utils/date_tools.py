@@ -55,6 +55,10 @@ def get_end_of_day(
     return datetime.now(pytz.UTC).replace(hour=23, minute=59, second=59, microsecond=999999)
 
 
+def is_date_today(d: datetime):
+    return get_start_of_date(d) > get_start_of_day() and get_end_of_date(d) < get_end_of_day()
+
+
 def get_datetime_from_string(date_string: datetime | str | None) -> Optional[datetime]:
     if isinstance(date_string, datetime):
         return date_string

@@ -49,7 +49,7 @@ user_intent_examples = [
         "output": json.dumps(
             [
                 {
-                    "name": "create_tasks",
+                    "name": "task_record",
                     "parameters": {
                         "tasks": [
                             {
@@ -82,7 +82,7 @@ user_intent_examples = [
         "output": json.dumps(
             [
                 {
-                    "name": "create_tasks",
+                    "name": "task_record",
                     "parameters": {
                         "tasks": [
                             {
@@ -105,7 +105,7 @@ user_intent_examples = [
         "output": json.dumps(
             [
                 {
-                    "name": "create_tasks",
+                    "name": "task_record",
                     "parameters": {
                         "tasks": [
                             {

@@ -62,7 +62,7 @@ class Sentiment(str, Enum):
     negative = "negative"
 
 
-class UserIntentCreateTask(BaseModel):
+class UserIntentTask(BaseModel):
     id: str
     category: str = Field(description="The category of the life management task.")
     due_date: Optional[str] = Field(
@@ -74,6 +74,7 @@ class UserIntentCreateTask(BaseModel):
         ge=1,
         le=5,
     )
+    state: FocusState = Field(description="Whether the user has done this task.")
     location: Optional[str] = Field(description="The location associated with the item.")
     keywords: List[str] = Field(description="The keywords associated with the item.")
     sentiment: Sentiment

@@ -7,7 +7,7 @@ from langchain_core.documents import Document
 from sqlalchemy.orm import Session
 
 from src.data.db import SessionLocal
-from src.data.models.focus import Focus, FocusState, UserIntentCreateTask
+from src.data.models.focus import Focus, FocusState, UserIntentTask
 from src.services import chroma_service
 from src.utils.logger import logger
 
@@ -15,7 +15,7 @@ NON_TASK_TYPES = ["chat", "feeling", "request", "question"]
 
 
 def get_focus_vector_documents(
-    focus_items: List[Focus], base_items: Optional[List[UserIntentCreateTask]] = None
+    focus_items: List[Focus], base_items: Optional[List[UserIntentTask]] = None
 ) -> List[Document]:
     documents: List[Document] = []
 
@@ -42,7 +42,7 @@ def get_focus_item_by_id(focus_items: List[Focus], id: str) -> Focus:
 
 
 def add_focus_items_to_vector_store(
-    focus_items: List[Focus], base_items: List[UserIntentCreateTask]
+    focus_items: List[Focus], base_items: List[UserIntentTask]
 ) -> List[Focus] | None:
     try:
         documents = get_focus_vector_documents(focus_items, base_items)
@@ -77,37 +77,34 @@ def delete_focus_item_from_vector_store(focus_item: Focus):
 
 
 def create_focus_items(
-    focus_items: List[UserIntentCreateTask], profile_id: uuid.UUID, session: Session
+    focus_items: List[UserIntentTask], profile_id: uuid.UUID, session: Session
 ) -> List[Focus]:
     filtered_items = [item for item in focus_items if item.type not in NON_TASK_TYPES]
     if len(filtered_items) == 0:
         return []
 
-    try:
-        created_items = [
-            Focus(
-                text=item.text,
-                type=item.type,
-                task_size=item.task_size,
-                category=item.category,
-                priority=item.priority,
-                sentiment=item.sentiment,
-                due_date=item.due_date,
-                profile_id=profile_id,
-            )
-            for item in focus_items
-        ]
+    created_items = [
+        Focus(
+            text=item.text,
+            type=item.type,
+            task_size=item.task_size,
+            category=item.category,
+            priority=item.priority,
+            sentiment=item.sentiment,
+            due_date=item.due_date,
+            profile_id=profile_id,
+            state=item.state.value,
+        )
+        for item in focus_items
+    ]
 
-        session.add_all(created_items)
-        session.flush()
-        session.commit()
+    session.add_all(created_items)
+    session.flush()
+    session.commit()
 
-        add_focus_items_to_vector_store(focus_items=created_items, base_items=focus_items)
+    add_focus_items_to_vector_store(focus_items=created_items, base_items=focus_items)
 
-        return created_items
-    except Exception as e:
-        logger.error(f"Error creating focus items: {e}")
-        return []
+    return created_items
 
 
 def search_focus_items(

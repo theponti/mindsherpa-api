@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Annotated, Any, Sequence
+from typing import Annotated, List
 
 import pydantic
 from langchain.agents import create_tool_calling_agent
@@ -10,7 +10,7 @@ from langchain_core.prompts import (
     SystemMessagePromptTemplate,
 )
 from langgraph.graph import END, Graph
-from typing_extensions import Dict, TypedDict
+from typing_extensions import TypedDict
 
 from src.routers.chat_router import start_chat
 from src.services.file_service import get_file_contents
@@ -19,23 +19,24 @@ from src.services.user_intent.tools import search_tasks
 from src.services.user_intent.tools.search_tasks import format_search_tool_calls
 from src.services.user_intent.user_intent_service import (
     GeneratedIntentsResponse,
-    create_tasks,
     edit_task,
     format_chat_tool_call,
     format_create_tool_calls,
+    task_record,
 )
 
 
 class AgentState(TypedDict):
-    messages: Annotated[Sequence[HumanMessage | AIMessage], pydantic.Field(default_factory=list)]
+    messages: Annotated[List[HumanMessage | AIMessage], pydantic.Field(default_factory=list)]
     tools_used: Annotated[list[str], pydantic.Field(default_factory=list)]
+    tool_to_use: str
     profile_id: uuid.UUID
     current_date: str
 
 
 def determine_tool(state: AgentState):
     system_prompt = get_file_contents("src/services/user_intent/user_intent_prompt.md")
-    tools = [create_tasks, search_tasks, edit_task, start_chat]
+    tools = [task_record, search_tasks, edit_task, start_chat]
     chat_prompt = ChatPromptTemplate(
         [
             SystemMessagePromptTemplate.from_template(template=system_prompt),
@@ -49,9 +50,10 @@ def determine_tool(state: AgentState):
     return tool_to_use
 
 
-def execute_tool(state: AgentState, tool_name: str):
+def execute_tool(state: AgentState):
+    tool_name = state["tool_to_use"]
     tools = {
-        "create_tasks": create_tasks,
+        "task_record": task_record,
         "search_tasks": search_tasks,
         "edit_task": edit_task,
         "chat": start_chat,
@@ -81,14 +83,16 @@ workflow.set_entry_point("determine_tool")
 chain = workflow.compile()
 
 
-def get_user_intent_graph(user_input: str, profile_id: uuid.UUID) -> Dict[str, Any]:
+def get_user_intent_graph(user_input: str, profile_id: uuid.UUID) -> AgentState:
     initial_state = AgentState(
         messages=[HumanMessage(content=user_input)],
+        tool_to_use="",
         tools_used=[],
         profile_id=profile_id,
         current_date=datetime.now().strftime("%Y-%m-%d"),
     )
     result = chain.invoke(initial_state)
+    result = AgentState(**result)
     return result
 
 
@@ -104,10 +108,11 @@ def generate_intent_result_graph(intent: AgentState) -> GeneratedIntentsResponse
     """
     steps = intent["tools_used"]
     output = intent["messages"][-1].content if intent["messages"] else ""
+    first_message = intent["messages"][0].content
 
     return GeneratedIntentsResponse(
-        input=intent["messages"][0].content if intent["messages"] else None,
-        output=output,
+        input=first_message if isinstance(first_message, str) else None,
+        output=output if isinstance(output, str) else None,
         chat=format_chat_tool_call(steps),
         create=format_create_tool_calls(steps),
         search=format_search_tool_calls(steps),

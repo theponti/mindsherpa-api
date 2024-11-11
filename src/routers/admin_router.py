@@ -127,6 +127,6 @@ async def process_user_intent(user_input: str = Form(...), profile_id: uuid.UUID
         final_result = generate_intent_result_graph(intent_result)
 
         # Return the result as a dictionary
-        return UserIntentResponse(result=final_result.dict())
+        return UserIntentResponse(result=final_result.model_dump())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -19,7 +19,7 @@ from typing_extensions import Dict, TypedDict
 from src.data.chat_repository import get_chat_history
 from src.data.db import SessionLocal
 from src.data.focus_repository import create_focus_items
-from src.data.models.focus import FocusItem, FocusItemBase, UserIntentCreateTask
+from src.data.models.focus import FocusItem, FocusItemBase, UserIntentTask
 from src.services.file_service import get_file_contents
 from src.services.openai_service import openai_chat
 from src.services.user_intent.tools.search_tasks import (
@@ -34,16 +34,13 @@ class IntentOutput(pydantic.BaseModel):
     parameters: Dict[str, Any] = pydantic.Field(description="The parameters to pass to the function")
 
 
-@tool("create_tasks")
-def create_tasks(
+@tool("task_record")
+def task_record(
     profile_id: uuid.UUID,
-    tasks: List[UserIntentCreateTask],
+    tasks: List[UserIntentTask],
 ) -> List[FocusItem]:
     """
-    This tool is used to create to-do list items for the user.
-
-    This tool should only be used for items that can be completed. Anything else should should
-    use the `chat` tool.
+    This tool is used to keep a record of actions the user has done or has to do in the future.
 
     Args:
         profile_id (uuid.UUID): The user's Profile ID
@@ -92,14 +89,14 @@ class CreateIntentsResponse(pydantic.BaseModel):
 
 
 def format_create_tool_calls(intermediate_steps) -> CreateIntentsResponse | None:
-    create_tasks: List[Tuple[AgentAction, List[FocusItem]]] = list(
-        filter(lambda x: x[0].tool == "create_tasks", intermediate_steps)
+    task_record: List[Tuple[AgentAction, List[FocusItem]]] = list(
+        filter(lambda x: x[0].tool == "task_record", intermediate_steps)
     )
 
-    if len(create_tasks) == 0:
+    if len(task_record) == 0:
         return None
 
-    create_task = create_tasks[0]
+    create_task = task_record[0]
     if create_task[0].tool_input is None:
         return None
 
@@ -108,7 +105,7 @@ def format_create_tool_calls(intermediate_steps) -> CreateIntentsResponse | None
             "tasks": create_task[0].tool_input["tasks"],  # type: ignore
             "profile_id": create_task[0].tool_input["profile_id"],  # type: ignore
         },
-        output=create_tasks[0][1],
+        output=task_record[0][1],
     )
 
 
@@ -141,7 +138,7 @@ def format_chat_tool_call(intermediate_steps) -> ChatResponse | None:
 
 class GeneratedIntentsResponse(pydantic.BaseModel):
     input: str | None
-    output: str
+    output: str | None
     chat: ChatResponse | None
     create: CreateIntentsResponse | None
     search: SearchIntentsResponse | None
@@ -174,7 +171,7 @@ def get_user_intent(
     session: Optional[Session], user_input: str, profile_id: uuid.UUID, chat_id: Optional[uuid.UUID] = None
 ) -> Dict[str, Any]:
     system_prompt = get_file_contents("src/services/user_intent/user_intent_prompt.md")
-    tools = [create_tasks, search_tasks, edit_task, start_chat]
+    tools = [task_record, search_tasks, edit_task, start_chat]
     chat_prompt = ChatPromptTemplate(
         [
             SystemMessagePromptTemplate.from_template(

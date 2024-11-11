@@ -168,7 +168,7 @@ async def send_chat_message(
 
     if sherpa_response.create is not None:
         focus_items.extend(sherpa_response.create.output)
-        function_calls.append("create_tasks")
+        function_calls.append("task_record")
 
     if sherpa_response.search is not None:
         focus_items.extend(sherpa_response.search.output)
@@ -180,7 +180,7 @@ async def send_chat_message(
         chat_id=chat_id,
         profile_id=profile.id,
         role=MessageRole.ASSISTANT.value,
-        message=sherpa_response.output,
+        message=sherpa_response.output or "",
         focus_ids=[item.id for item in focus_items],
     )
 

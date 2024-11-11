@@ -10,7 +10,6 @@ from sqlalchemy.orm import Query as SQQuery
 from src.data.models.focus import (
     Focus,
     FocusItem,
-    FocusState,
     complete_focus,
     get_focus_by_id,
 )
@@ -41,16 +40,20 @@ async def get_focus_items(
     db: SessionDep,
     category: Optional[str] = None,
     timezone: str = Query(default="UTC", description="Timezone to use for date filtering"),
-    start_date: Optional[str] = Query(default=None, description="Start date for date filtering"),
-    end_date: Optional[str] = Query(default=None, description="End date for date filtering"),
+    start_date: Optional[str] = Query(
+        default=get_start_of_day().strftime("%Y-%m-%d %H:%M:%S"),
+        description="Return items after this datetime. Defaults to start of the current day.",
+    ),
+    end_date: Optional[str] = Query(
+        default=get_end_of_day().strftime("%Y-%m-%d %H:%M:%S"),
+        description="Return items before this datetime. Defaults to end of the current day.",
+    ),
 ):
+    print("start_date", start_date)
+    print("end_date", end_date)
     query = db.query(Focus).filter(
         Focus.profile_id == profile.id,
-        Focus.state.notin_(
-            [
-                FocusState.completed.value,
-            ]
-        ),
+        Focus.due_date.between(start_date, end_date),
     )
 
     # Apply category filter if provided
@@ -63,7 +66,8 @@ async def get_focus_items(
     # Execute query
     focus_items = query.all()
     for item in focus_items:
-        item.due_date = pytz.utc.localize(item.due_date).astimezone(pytz.timezone(timezone))
+        if item.due_date:
+            item.due_date = pytz.utc.localize(item.due_date).astimezone(pytz.timezone(timezone))
 
     return {"items": focus_items}
 
